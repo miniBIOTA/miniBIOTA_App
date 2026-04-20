@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>miniBIOTA — Story Dashboard</title>
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>miniBIOTA</h1>
+  <div class="page-tabs">
+    <button class="page-tab active" id="tab-story" onclick="showPage('story')">Story Dashboard</button>
+    <button class="page-tab" id="tab-checklist" onclick="showPage('checklist')">Weekly Checklist</button>
+    <button class="page-tab" id="tab-tasks" onclick="showPage('tasks')">Tasks</button>
+    <button class="page-tab" id="tab-financials" onclick="showPage('financials')">Financials</button>
+    <button class="page-tab" id="tab-sales" onclick="showPage('sales')">Sales Pipeline</button>
+    <button class="page-tab" id="tab-roadmap" onclick="showPage('roadmap')">Roadmap</button>
+    <button class="page-tab" id="tab-admin" onclick="showPage('admin')">Site Admin</button>
+  </div>
+  <button class="refresh-btn" id="refresh-btn" onclick="loadAll()" style="margin-left:16px">Refresh</button>
+</div>
+
+<div id="page-story">
+<div class="subtitle" id="last-updated">Loading...</div>
+
+<!-- Biome filter tabs -->
+<div class="filter-row" id="biome-tabs"></div>
+
+<!-- System filter tabs -->
+<div class="filter-row" id="system-tabs"></div>
+
+<!-- Species filter tabs -->
+<div class="filter-row last" id="species-tabs"></div>
+
+<!-- Stats -->
+<div class="stat-row" id="stats"></div>
+
+<!-- Open Loops -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-title">Open Loops</span>
+    <span class="count-badge" id="loops-count">—</span>
+    <button class="toggle-btn" id="resolved-toggle" onclick="toggleResolved()">Show resolved</button>
+  </div>
+  <div id="loops-container"><div class="loading">Loading...</div></div>
+</div>
+
+<!-- Story Threads -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-title">Story Threads</span>
+    <span class="count-badge" id="threads-count">—</span>
+  </div>
+  <div id="threads-container"><div class="loading">Loading...</div></div>
+</div>
+
+<!-- Recent Observations -->
+<div class="section">
+  <div class="section-header">
+    <span class="section-title">Recent Observations</span>
+    <span class="count-badge" id="obs-count">—</span>
+  </div>
+  <div id="obs-container"><div class="loading">Loading...</div></div>
+</div>
+
+</div><!-- /page-story -->
+
+<!-- ── Weekly Checklist Page ── -->
+<div id="page-checklist" class="hidden">
+
+  <div class="checklist-header">
+    <span class="week-label">Week of <strong id="week-range">—</strong></span>
+    <button class="new-week-btn" onclick="resetWeek()">Reset week</button>
+    <div class="cl-view-toggle">
+      <button class="cl-view-btn active" id="cl-view-list" onclick="setClView('list')">List</button>
+      <button class="cl-view-btn" id="cl-view-cal" onclick="setClView('cal')">Calendar</button>
+    </div>
+  </div>
+
+  <div id="cl-list-view">
+  <!-- Planning -->
+  <div class="cl-section">
+    <div class="cl-section-header">
+      <span class="cl-section-title">Weekly Planning</span>
+      <span class="cl-progress" id="prog-plan">—</span>
+    </div>
+    <div id="cl-plan"></div>
+  </div>
+
+  <!-- Mid Form 1 -->
+  <div class="cl-section">
+    <div class="cl-section-header">
+      <span class="cl-section-title">Mid Form 1</span>
+      <span class="cl-progress" id="prog-mf1">—</span>
+    </div>
+    <input class="cl-title-input" id="title-mf1" placeholder="Story title or topic..." oninput="saveTitle('mf1', this.value)">
+    <div id="cl-mf1"></div>
+  </div>
+
+  <!-- Mid Form 2 -->
+  <div class="cl-section">
+    <div class="cl-section-header">
+      <span class="cl-section-title">Mid Form 2</span>
+      <span class="cl-progress" id="prog-mf2">—</span>
+    </div>
+    <input class="cl-title-input" id="title-mf2" placeholder="Story title or topic..." oninput="saveTitle('mf2', this.value)">
+    <div id="cl-mf2"></div>
+  </div>
+
+  <!-- Mid Form 3 -->
+  <div class="cl-section">
+    <div class="cl-section-header">
+      <span class="cl-section-title">Mid Form 3</span>
+      <span class="cl-progress" id="prog-mf3">—</span>
+    </div>
+    <input class="cl-title-input" id="title-mf3" placeholder="Story title or topic..." oninput="saveTitle('mf3', this.value)">
+    <div id="cl-mf3"></div>
+  </div>
+
+  <!-- True Longform -->
+  <div class="cl-section">
+    <div class="cl-section-header">
+      <span class="cl-section-title">True Longform</span>
+      <span class="cl-progress" id="prog-lf">—</span>
+    </div>
+    <div class="fallback-row">
+      <span class="fallback-label">No story ready?</span>
+      <button class="fallback-btn" id="fb-flex" onclick="setFallback('flex')">Flex week</button>
+      <button class="fallback-btn" id="fb-bank" onclick="setFallback('bank')">Story bank</button>
+      <button class="fallback-btn" id="fb-lane3" onclick="setFallback('lane3')">Lane 3 fill</button>
+    </div>
+    <input class="cl-title-input" id="title-lf" placeholder="Video title..." oninput="saveTitle('lf', this.value)">
+    <div id="cl-lf"></div>
+  </div>
+
+  <!-- End of Week -->
+  <div class="cl-section">
+    <div class="cl-section-header">
+      <span class="cl-section-title">End of Week</span>
+      <span class="cl-progress" id="prog-eow">—</span>
+    </div>
+    <div id="cl-eow"></div>
+  </div>
+  </div><!-- /cl-list-view -->
+
+  <div id="cl-cal-view" class="hidden">
+    <div id="cal-grid"></div>
+  </div>
+
+</div><!-- /page-checklist -->
+
+<!-- ── Tasks Page ── -->
+<div id="page-tasks" class="hidden">
+
+  <div class="tasks-header">
+    <span class="week-label">All open tasks — <strong id="tasks-total">—</strong></span>
+    <button class="tasks-show-done-btn" id="tasks-show-done-btn" onclick="toggleTasksDone()">Show completed</button>
+    <button class="tasks-clear-btn" onclick="loadTasks()">Refresh</button>
+  </div>
+
+  <div id="tasks-container"><div class="loading">Loading...</div></div>
+
+</div><!-- /page-tasks -->
+
+<!-- ── Financials Page ── -->
+<div id="page-financials" class="hidden">
+
+  <div class="tasks-header">
+    <span class="week-label" style="color:#6a5020">Financial overview — <strong id="fin-month" style="color:#c8a040">—</strong></span>
+    <button class="tasks-clear-btn" onclick="loadFinancials()">Refresh</button>
+  </div>
+
+  <!-- Stats row -->
+  <div class="fin-stat-row">
+    <div class="fin-stat">
+      <div class="fin-stat-num" id="fin-stat-revenue">—</div>
+      <div class="fin-stat-label">Revenue <span id="fin-stat-period" style="text-transform:none;font-size:10px"></span></div>
+    </div>
+    <div class="fin-stat">
+      <div class="fin-stat-num" id="fin-stat-burn">—</div>
+      <div class="fin-stat-label">Monthly Burn</div>
+    </div>
+    <div class="fin-stat">
+      <div class="fin-stat-num" id="fin-stat-net">—</div>
+      <div class="fin-stat-label">Net</div>
+    </div>
+    <div class="fin-stat">
+      <div class="fin-stat-num" id="fin-stat-debt">—</div>
+      <div class="fin-stat-label">Credit Card Debt</div>
+    </div>
+  </div>
+
+  <!-- Revenue by source -->
+  <div class="fin-section">
+    <div class="fin-section-header">
+      <span class="fin-section-title">Revenue by Source</span>
+      <span class="count-badge" id="fin-rev-period">—</span>
+    </div>
+    <div id="fin-rev-container"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- Operating expenses -->
+  <div class="fin-section">
+    <div class="fin-section-header">
+      <span class="fin-section-title">Monthly Burn</span>
+      <span class="count-badge" id="fin-burn-total">—</span>
+    </div>
+    <div id="fin-burn-container"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- Liabilities -->
+  <div class="fin-section">
+    <div class="fin-section-header">
+      <span class="fin-section-title">Liabilities</span>
+      <span class="count-badge" id="fin-liab-total">—</span>
+    </div>
+    <div id="fin-liab-container"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- Planned purchases -->
+  <div class="fin-section">
+    <div class="fin-section-header">
+      <span class="fin-section-title">Planned Purchases</span>
+      <span class="count-badge" id="fin-purchases-total">—</span>
+    </div>
+    <div id="fin-purchases-container"><div class="loading">Loading...</div></div>
+  </div>
+
+</div><!-- /page-financials -->
+
+<!-- ── Sales Pipeline Page ── -->
+<div id="page-sales" class="hidden">
+
+  <div class="sales-header">
+    <span class="week-label" style="color:#4a6a3a">Sponsorship pipeline — <strong id="sales-month" style="color:#7aaa50">—</strong></span>
+    <button class="tasks-clear-btn" onclick="loadSales()">Refresh</button>
+  </div>
+
+  <!-- Revenue goal bar -->
+  <div class="goal-bar-wrap">
+    <div class="goal-bar-labels">
+      <span class="goal-bar-current" id="goal-current">—</span>
+      <span class="goal-bar-target">Goal: $2,000 / mo</span>
+    </div>
+    <div class="goal-bar-track">
+      <div class="goal-bar-fill" id="goal-bar" style="width:0%"></div>
+    </div>
+    <div class="goal-bar-sublabel" id="goal-sublabel">Loading revenue data...</div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="sales-stat-row" id="sales-stats"></div>
+
+  <!-- Partner pipeline -->
+  <div class="sales-section">
+    <div class="sales-section-header">
+      <span class="sales-section-title">Partner Pipeline</span>
+      <span class="count-badge" id="sales-pipeline-count">—</span>
+    </div>
+    <div id="sales-pipeline-container"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- Sales tasks -->
+  <div class="sales-section">
+    <div class="sales-section-header">
+      <span class="sales-section-title">This Week — Sales Actions</span>
+      <span class="count-badge" id="sales-tasks-count">—</span>
+    </div>
+    <div id="sales-tasks-container"><div class="loading">Loading...</div></div>
+  </div>
+
+</div><!-- /page-sales -->
+
+<!-- ── Roadmap Page ── -->
+<div id="page-roadmap" class="hidden">
+
+  <div class="roadmap-header">
+    <span class="week-label" style="color:#5a5a8a">Strategic Roadmap — <strong id="roadmap-date" style="color:#8a80dd">—</strong></span>
+    <button class="tasks-clear-btn" onclick="loadRoadmap()">Refresh</button>
+  </div>
+
+  <!-- Stats row -->
+  <div class="roadmap-stat-row" id="roadmap-stats"></div>
+
+  <!-- Capacity bar -->
+  <div class="capacity-wrap">
+    <div class="capacity-labels">
+      <span class="capacity-committed" id="cap-committed">— hrs/wk</span>
+      <span class="capacity-available" id="cap-available">—</span>
+    </div>
+    <div class="capacity-track">
+      <div class="capacity-fill" id="cap-bar" style="width:0%"></div>
+    </div>
+    <div class="capacity-sublabel" id="cap-sublabel">Weekly hours committed across active + planned initiatives</div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="roadmap-section">
+    <div class="roadmap-section-header">
+      <span class="roadmap-section-title">12-Month Timeline</span>
+    </div>
+    <div class="timeline-wrap">
+      <div class="timeline-months" id="timeline-months"></div>
+      <div id="timeline-rows"></div>
+    </div>
+  </div>
+
+  <!-- Initiative cards -->
+  <div class="roadmap-section">
+    <div class="roadmap-section-header">
+      <span class="roadmap-section-title">All Initiatives</span>
+      <span class="count-badge" id="roadmap-count">—</span>
+    </div>
+    <div id="roadmap-cards"><div class="loading">Loading...</div></div>
+  </div>
+
+</div><!-- /page-roadmap -->
+
+<!-- ══════════════════════════════════════ SITE ADMIN ══════════════════════════════════════ -->
+<div id="page-admin" class="hidden">
+  <div class="admin-subnav">
+    <button class="admin-subnav-btn active" id="adm-btn-species"       onclick="showAdminSection('species')">Species</button>
+    <button class="admin-subnav-btn"        id="adm-btn-biosphere"     onclick="showAdminSection('biosphere')">Biosphere</button>
+    <button class="admin-subnav-btn"        id="adm-btn-biomes"        onclick="showAdminSection('biomes')">Biomes</button>
+    <button class="admin-subnav-btn"        id="adm-btn-chronicles"    onclick="showAdminSection('chronicles')">Chronicles</button>
+    <button class="admin-subnav-btn"        id="adm-btn-announcements" onclick="showAdminSection('announcements')">Announcements</button>
+    <button class="admin-subnav-btn"        id="adm-btn-staging"       onclick="showAdminSection('staging')">Staging</button>
+  </div>
+  <div id="admin-status" class="admin-status"></div>
+
+  <!-- ── SPECIES ── -->
+  <div id="admin-sec-species" class="admin-section active">
+    <div class="adm-section-hdr">Current Species</div>
+    <div class="adm-table-wrap"><table class="adm-table" id="adm-species-table">
+      <thead><tr>
+        <th>Common Name</th><th>Scientific Name</th><th>Realm</th><th>Status</th>
+        <th>Pop. Status</th><th>Last Observed</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="adm-species-tbody"><tr><td colspan="7" class="no-data">Loading…</td></tr></tbody>
+    </table></div>
+
+    <div class="adm-form-wrap">
+      <div class="adm-form-title" id="adm-sp-form-title">Add New Species</div>
+      <form id="adm-sp-form" onsubmit="admSubmitSpecies(event)">
+        <details class="adm-details" open>
+          <summary>Basics / Species Card</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Common Name *</label><input id="sp-common_name" required placeholder="e.g., Aiptasia"></div>
+              <div class="adm-form-group"><label>Scientific Name</label><input id="sp-scientific_name" placeholder="e.g., Aiptasia pallida"></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Realm *</label>
+                <select id="sp-realm" required>
+                  <option value="">Select Realm</option>
+                  <option>Freshwater</option><option>Saltwater</option>
+                  <option>Terrestrial</option><option>Brackish</option>
+                </select>
+              </div>
+              <div class="adm-form-group"><label>Display Status</label>
+                <select id="sp-display_status">
+                  <option value="active">Active</option><option value="unreviewed">Unreviewed</option>
+                  <option value="wishlist">Wishlist</option><option value="considered">Considered</option>
+                </select>
+                <span class="adm-form-help">Only Active species appear on the public website.</span>
+              </div>
+            </div>
+            <div class="adm-form-group full"><label>Main Biomes</label>
+              <div id="sp-biome-checkboxes" class="adm-checkbox-group"><!-- populated on load --></div>
+            </div>
+            <div class="adm-form-row" style="margin-top:12px">
+              <div class="adm-form-group"><label>Primary Species Image</label>
+                <input id="sp-image" type="file" accept="image/*">
+                <span class="adm-form-help">Leave blank to keep existing image when editing.</span>
+              </div>
+            </div>
+            <div class="adm-form-group full" style="margin-top:8px"><label>Hero Description</label>
+              <textarea id="sp-species_description" rows="3" placeholder="Short description shown in the species hero section"></textarea>
+            </div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Identity &amp; Origin</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Introduction Method</label>
+                <select id="sp-introduction_method">
+                  <option value="">Select</option>
+                  <option>Intentional Seeding</option><option>Hitchhiker</option><option>Unknown</option>
+                </select>
+              </div>
+              <div class="adm-form-group"><label>Date First Introduced</label>
+                <input id="sp-date_first_introduced" type="date">
+              </div>
+            </div>
+            <div class="adm-form-group full"><label>Source / Origin</label><input id="sp-source_origin" placeholder="e.g., Live rock hitchhiker, specific vendor"></div>
+            <div class="adm-form-group full" style="margin-top:8px"><label>Notes</label><textarea id="sp-identity_origin_notes" rows="3"></textarea></div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Population Dynamics</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Current Est. Population</label><input id="sp-current_estimated_population" placeholder="e.g., 1-10, 10-100, 1000+"></div>
+              <div class="adm-form-group"><label>Population Status</label>
+                <select id="sp-population_status">
+                  <option value="">Select</option>
+                  <option>Thriving</option><option>Established</option><option>Vulnerable</option>
+                  <option>Uncertain</option><option>Extirpated</option><option>Removed</option>
+                </select>
+              </div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Carrying Capacity Status</label>
+                <select id="sp-carrying_capacity_status">
+                  <option value="">Select</option>
+                  <option>Below Capacity</option><option>Approaching Capacity</option>
+                  <option>At Capacity</option><option>Over Capacity</option><option>Unknown</option>
+                </select>
+              </div>
+              <div class="adm-form-group"><label>Date Last Observed</label><input id="sp-date_last_observed" type="date"></div>
+            </div>
+            <div class="adm-form-group full"><label>Notes</label><textarea id="sp-population_dynamics_notes" rows="3"></textarea></div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Trophic Ecology</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Trophic Level</label>
+                <select id="sp-trophic_level">
+                  <option value="">Select</option>
+                  <option>Producer</option><option>Primary Consumer</option>
+                  <option>Secondary Consumer</option><option>Detritivore</option>
+                  <option>Scavenger</option><option>Unknown</option>
+                </select>
+              </div>
+              <div class="adm-form-group"><label>Feeding Method</label>
+                <select id="sp-feeding_method">
+                  <option value="">Select</option>
+                  <option>Filter Feeder</option><option>Photosynthetic</option>
+                  <option>Active Predator</option><option>Grazer</option><option>Unknown</option>
+                </select>
+              </div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Dietary Inputs</label><input id="sp-dietary_inputs" placeholder="e.g., phytoplankton, detritus"></div>
+              <div class="adm-form-group"><label>Known Predators</label><input id="sp-known_predators" placeholder="What eats it?"></div>
+            </div>
+            <div class="adm-form-group full"><label>Notes</label><textarea id="sp-trophic_ecology_notes" rows="3"></textarea></div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Environmental Tolerances</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Temperature Range</label><input id="sp-temperature_range" placeholder="e.g., 70-82 F"></div>
+              <div class="adm-form-group"><label>pH Range</label><input id="sp-ph_range" placeholder="e.g., 7.8-8.3"></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Lighting Requirements</label>
+                <select id="sp-lighting_requirements">
+                  <option value="">Select</option>
+                  <option>None</option><option>Low</option><option>Moderate</option>
+                  <option>High</option><option>Unknown</option>
+                </select>
+              </div>
+              <div class="adm-form-group"><label>Flow / Aeration Preference</label>
+                <select id="sp-flow_aeration_preference">
+                  <option value="">Select</option>
+                  <option>Stagnant</option><option>Low Flow</option>
+                  <option>High Flow</option><option>Unknown</option>
+                </select>
+              </div>
+            </div>
+            <div class="adm-form-group full"><label>Notes</label><textarea id="sp-environmental_tolerances_notes" rows="3"></textarea></div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Life Cycle &amp; Reproduction</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Expected Lifespan</label><input id="sp-expected_lifespan" placeholder="e.g., months, years"></div>
+              <div class="adm-form-group"><label>Reproductive Strategy</label><input id="sp-reproductive_strategy" placeholder="e.g., Broadcast spawning"></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>System Reproduction Status</label>
+                <select id="sp-system_reproduction_status">
+                  <option value="">Select</option>
+                  <option>Confirmed Breeding</option><option>Attempted/Unsuccessful</option>
+                  <option>No Signs of Breeding</option><option>Unknown</option>
+                </select>
+              </div>
+              <div class="adm-form-group"><label>Growth Rate</label>
+                <select id="sp-growth_rate">
+                  <option value="">Select</option>
+                  <option>Slow</option><option>Moderate</option>
+                  <option>Rapid/Invasive</option><option>Unknown</option>
+                </select>
+              </div>
+            </div>
+            <div class="adm-form-group full"><label>Notes</label><textarea id="sp-life_cycle_reproduction_notes" rows="3"></textarea></div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Ecological Role &amp; Symbiosis</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Ecological Role</label>
+                <select id="sp-ecological_role">
+                  <option value="">Select</option>
+                  <option>Keystone Species</option><option>Ecosystem Engineer</option>
+                  <option>Nuisance/Pest</option><option>Clean-up Crew</option><option>Unknown</option>
+                </select>
+              </div>
+              <div class="adm-form-group"><label>Microhabitat Preference</label><input id="sp-microhabitat_preference" placeholder="e.g., rock crevices, substrate"></div>
+            </div>
+            <div class="adm-form-group full"><label>Symbiotic Relationships</label><input id="sp-symbiotic_relationships" placeholder="Species or relationships it relies on or supports"></div>
+            <div class="adm-form-group full" style="margin-top:8px"><label>Notes</label><textarea id="sp-ecological_role_symbiosis_notes" rows="3"></textarea></div>
+          </div>
+        </details>
+        <div class="adm-form-submit">
+          <button type="submit" class="adm-submit-btn" id="adm-sp-submit-btn">Add Species</button>
+          <button type="button" class="adm-cancel-btn" id="adm-sp-cancel-btn" style="display:none" onclick="admClearSpeciesForm()">Cancel Edit</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Species image manager (inline panel) -->
+    <div id="adm-img-panel" style="display:none" class="adm-form-wrap">
+      <div class="adm-form-title" id="adm-img-panel-title">Manage Images</div>
+      <div class="adm-form-row">
+        <div class="adm-form-group"><label>Upload New Image</label><input id="adm-img-upload-input" type="file" accept="image/*"></div>
+        <div class="adm-form-group" style="justify-content:flex-end;padding-top:18px">
+          <button class="adm-submit-btn" onclick="admUploadSpeciesImage()" style="width:auto">Upload</button>
+        </div>
+      </div>
+      <div id="adm-img-grid" class="adm-img-grid"></div>
+      <div style="margin-top:12px"><button class="adm-cancel-btn" onclick="document.getElementById('adm-img-panel').style.display='none'">Close</button></div>
+    </div>
+  </div><!-- /admin-sec-species -->
+
+  <!-- ── BIOSPHERE ── -->
+  <div id="admin-sec-biosphere" class="admin-section">
+    <div class="adm-section-hdr">Biosphere Profile</div>
+    <div class="adm-form-wrap">
+      <form id="adm-bs-form" onsubmit="admSubmitBiosphere(event)">
+        <details class="adm-details" open>
+          <summary>Basics / Biosphere Cover</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Project Name *</label><input id="bs-project_name" required placeholder="miniBIOTA"></div>
+              <div class="adm-form-group"><label>Current Status</label><input id="bs-current_status" placeholder="e.g., Active &amp; Expanding"></div>
+            </div>
+            <div class="adm-form-group full"><label>Mission / Vision Brief</label>
+              <textarea id="bs-mission_brief" rows="3" placeholder="One sentence that anchors the whole project"></textarea>
+            </div>
+            <div class="adm-form-row" style="margin-top:8px">
+              <div class="adm-form-group"><label>Primary Biosphere Image</label>
+                <input id="bs-image" type="file" accept="image/*">
+                <span class="adm-form-help">Leave blank to keep existing image.</span>
+              </div>
+            </div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Global Architecture</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Total System Volume</label><input id="bs-total_system_volume" placeholder="e.g., 120 gallons total"></div>
+              <div class="adm-form-group"><label>Total Footprint / Area</label><input id="bs-total_footprint_area" placeholder="e.g., 48 square feet"></div>
+            </div>
+            <div class="adm-form-group"><label>System Age</label><input id="bs-system_age" placeholder="e.g., 2 years 3 months"></div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Environmental Inputs</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Total Daily Power Consumption</label><input id="bs-total_daily_power_consumption" placeholder="e.g., 3.4 kWh/day"></div>
+              <div class="adm-form-group"><label>Ambient Room Temperature</label><input id="bs-ambient_room_temperature" placeholder="e.g., 72 F"></div>
+            </div>
+            <div class="adm-form-group"><label>Ambient Room Humidity</label><input id="bs-ambient_room_humidity" placeholder="e.g., 48%"></div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Total Biodiversity Index</summary>
+          <div class="adm-details-body">
+            <span class="adm-form-help" style="display:block;margin-bottom:10px">Calculated live from your species and biomes data. Override manually if needed.</span>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Total Extant Species</label><input id="bs-total_extant_species" placeholder="auto"></div>
+              <div class="adm-form-group"><label>Number of Active Realms</label><input id="bs-number_of_active_realms" placeholder="auto"></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Number of Active Biomes</label><input id="bs-number_of_active_biomes" placeholder="auto"></div>
+              <div class="adm-form-group"><label>Total Extirpated / Removed Species</label><input id="bs-total_extinct_removed_species" placeholder="auto"></div>
+            </div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Global System Status</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Ecological Stability Rating</label><input id="bs-ecological_stability_rating" placeholder="e.g., Highly Stable"></div>
+              <div class="adm-form-group"><label>Primary Maintenance Focus</label><input id="bs-primary_maintenance_focus" placeholder="e.g., Monitoring saltwater alkalinity"></div>
+            </div>
+          </div>
+        </details>
+        <div class="adm-form-submit">
+          <button type="submit" class="adm-submit-btn">Save Biosphere Profile</button>
+        </div>
+      </form>
+    </div>
+  </div><!-- /admin-sec-biosphere -->
+
+  <!-- ── BIOMES ── -->
+  <div id="admin-sec-biomes" class="admin-section">
+    <div class="adm-section-hdr">Current Biomes</div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr>
+        <th>Name</th><th>Realm</th><th>Typology</th><th>Status</th><th>Established</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="adm-biomes-tbody"><tr><td colspan="6" class="no-data">Loading…</td></tr></tbody>
+    </table></div>
+
+    <div class="adm-form-wrap">
+      <div class="adm-form-title" id="adm-bm-form-title">Add New Biome</div>
+      <form id="adm-bm-form" onsubmit="admSubmitBiome(event)">
+        <details class="adm-details" open>
+          <summary>Basics / Biome Card</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Biome Name *</label><input id="bm-name" required placeholder="e.g., Freshwater Lake"></div>
+              <div class="adm-form-group"><label>Public Name</label><input id="bm-public_name" placeholder="Display name for visitors"></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Realm *</label>
+                <select id="bm-realm" required>
+                  <option value="">Select Realm</option>
+                  <option>Freshwater</option><option>Saltwater</option><option>Terrestrial</option>
+                  <option>Brackish</option><option>Freshwater Riparian</option>
+                  <option>Saltwater Riparian</option><option>Riparian/Amphibious</option>
+                </select>
+              </div>
+              <div class="adm-form-group"><label>Interface Tag</label>
+                <select id="bm-interface_tag">
+                  <option value="">Auto from realm</option>
+                  <option>Freshwater</option><option>Marine/Saltwater</option>
+                  <option>Terrestrial</option><option>Brackish</option><option>Riparian/Amphibious</option>
+                </select>
+              </div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Date Established</label><input id="bm-date_established" type="date"></div>
+              <div class="adm-form-group"><label>Last Observed</label><input id="bm-last_observed" type="date"></div>
+            </div>
+            <div class="adm-form-group full"><label>Hero Description</label>
+              <textarea id="bm-hero_description" rows="3" placeholder="Short cover description for the biome detail hero"></textarea>
+            </div>
+            <div class="adm-form-group" style="margin-top:8px"><label>Primary Biome Image</label>
+              <input id="bm-image" type="file" accept="image/*">
+            </div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Physical Architecture</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>System Volume</label><input id="bm-system_volume" placeholder="e.g., 20 gallons"></div>
+              <div class="adm-form-group"><label>Dimensions / Footprint</label><input id="bm-dimensions_footprint" placeholder='e.g., 36" x 18" x 16"'></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Substrate Profile</label><textarea id="bm-substrate_profile" rows="2"></textarea></div>
+              <div class="adm-form-group"><label>Hardscape Elements</label><textarea id="bm-hardscape_elements" rows="2"></textarea></div>
+            </div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Physicochemical Parameters</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Temperature Range</label><input id="bm-temperature_range" placeholder="e.g., 76-79 F"></div>
+              <div class="adm-form-group"><label>pH Range</label><input id="bm-ph_range" placeholder="e.g., 8.1-8.3"></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Salinity / Specific Gravity</label><input id="bm-salinity_specific_gravity" placeholder="e.g., 1.025 SG"></div>
+              <div class="adm-form-group"><label>Core Humidity Range</label><input id="bm-core_humidity_range" placeholder="e.g., 70%-85%"></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Target Nutrient Levels</label><textarea id="bm-target_nutrient_levels" rows="2"></textarea></div>
+              <div class="adm-form-group"><label>Alkalinity / Calcium</label><textarea id="bm-alkalinity_calcium" rows="2"></textarea></div>
+            </div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Ecosystem Profile</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Primary Filtration Method</label><textarea id="bm-primary_filtration_method" rows="2"></textarea></div>
+              <div class="adm-form-group"><label>Primary Producers</label><textarea id="bm-primary_producers" rows="2"></textarea></div>
+            </div>
+            <div class="adm-form-row">
+              <div class="adm-form-group"><label>Nutrient Export System</label><textarea id="bm-nutrient_export_system" rows="2"></textarea></div>
+              <div class="adm-form-group"><label>Cleanup Crew Profile</label><textarea id="bm-cleanup_crew_profile" rows="2"></textarea></div>
+            </div>
+            <div class="adm-form-group full"><label>Current Stability Status</label><input id="bm-current_stability_status" placeholder="e.g., Stable, Recovering"></div>
+          </div>
+        </details>
+        <details class="adm-details">
+          <summary>Maintenance</summary>
+          <div class="adm-details-body">
+            <div class="adm-form-group full"><label>Routine Maintenance Schedule</label><textarea id="bm-routine_maintenance_schedule" rows="3"></textarea></div>
+            <div class="adm-form-group full"><label>Primary Maintenance Focus</label><textarea id="bm-primary_maintenance_focus" rows="2"></textarea></div>
+            <div class="adm-form-group full"><label>Legacy Notes</label><textarea id="bm-general_notes" rows="2"></textarea></div>
+          </div>
+        </details>
+        <div class="adm-form-submit">
+          <button type="submit" class="adm-submit-btn" id="adm-bm-submit-btn">Add Biome</button>
+          <button type="button" class="adm-cancel-btn" id="adm-bm-cancel-btn" style="display:none" onclick="admClearBiomeForm()">Cancel Edit</button>
+        </div>
+      </form>
+    </div>
+  </div><!-- /admin-sec-biomes -->
+
+  <!-- ── CHRONICLES ── -->
+  <div id="admin-sec-chronicles" class="admin-section">
+    <div class="adm-section-hdr">Chronicle Entries</div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr>
+        <th>Title</th><th>Scope</th><th>Target</th><th>Type</th><th>Date</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="adm-chronicles-tbody"><tr><td colspan="6" class="no-data">Loading…</td></tr></tbody>
+    </table></div>
+
+    <div class="adm-form-wrap">
+      <div class="adm-form-title" id="adm-ch-form-title">Add Chronicle Entry</div>
+      <form id="adm-ch-form" onsubmit="admSubmitChronicle(event)">
+        <div class="adm-form-row">
+          <div class="adm-form-group" style="flex:2"><label>Title *</label><input id="ch-title" required placeholder="e.g., Major filtration upgrade"></div>
+          <div class="adm-form-group"><label>Scope *</label>
+            <select id="ch-scope_type" required onchange="admToggleChronicleScope()">
+              <option value="biosphere">Biosphere</option><option value="biome">Biome</option>
+              <option value="species">Species</option><option value="system">System</option>
+            </select>
+          </div>
+          <div class="adm-form-group"><label>Event Date *</label><input id="ch-event_date" type="date" required></div>
+        </div>
+        <div class="adm-form-row">
+          <div class="adm-form-group"><label>Entry Type *</label>
+            <select id="ch-entry_type" required>
+              <option value="milestone">Milestone</option><option value="observation" selected>Observation</option>
+              <option value="change">Change</option><option value="failure_event">Failure Event</option>
+            </select>
+          </div>
+          <div class="adm-form-group" id="ch-realm-grp" style="display:none"><label>Realm Tag</label>
+            <select id="ch-realm_tag">
+              <option value="">Whole Project</option>
+              <option>Terrestrial</option><option>Freshwater</option>
+              <option>Marine/Saltwater</option><option>Brackish</option><option>Riparian/Amphibious</option>
+            </select>
+          </div>
+          <div class="adm-form-group" id="ch-biome-grp" style="display:none"><label>Linked Biome</label>
+            <select id="ch-biome_id"><option value="">Select Biome</option></select>
+          </div>
+          <div class="adm-form-group" id="ch-species-grp" style="display:none"><label>Linked Species</label>
+            <select id="ch-species_id"><option value="">Select Species</option></select>
+          </div>
+          <div class="adm-form-group" id="ch-system-grp" style="display:none"><label>Linked System</label>
+            <select id="ch-system_id">
+              <option value="">Select System</option>
+              <option value="1">Climate</option><option value="2">Rain</option><option value="3">Lighting</option>
+              <option value="4">Wave &amp; Tide</option><option value="5">Control System</option><option value="6">Enclosure</option>
+            </select>
+          </div>
+        </div>
+        <div class="adm-form-group full"><label>Content *</label>
+          <textarea id="ch-content" rows="6" required placeholder="Write the full chronicle entry here…"></textarea>
+        </div>
+        <div class="adm-form-row" style="margin-top:8px">
+          <div class="adm-form-group"><label>Photo (optional)</label>
+            <input id="ch-image" type="file" accept="image/*">
+            <span class="adm-form-help">Mutually exclusive with YouTube URL.</span>
+          </div>
+          <div class="adm-form-group"><label>YouTube URL (optional)</label>
+            <input id="ch-youtube_url" type="url" placeholder="https://www.youtube.com/watch?v=…">
+          </div>
+        </div>
+        <div class="adm-form-submit">
+          <button type="submit" class="adm-submit-btn" id="adm-ch-submit-btn">Add Chronicle</button>
+          <button type="button" class="adm-cancel-btn" id="adm-ch-cancel-btn" style="display:none" onclick="admClearChronicleForm()">Cancel Edit</button>
+        </div>
+      </form>
+    </div>
+  </div><!-- /admin-sec-chronicles -->
+
+  <!-- ── ANNOUNCEMENTS ── -->
+  <div id="admin-sec-announcements" class="admin-section">
+    <div class="adm-section-hdr">Announcements</div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr>
+        <th>Title</th><th>Active</th><th>Expires</th><th>Created</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="adm-ann-tbody"><tr><td colspan="5" class="no-data">Loading…</td></tr></tbody>
+    </table></div>
+
+    <div class="adm-form-wrap">
+      <div class="adm-form-title">Create Announcement</div>
+      <form id="adm-ann-form" onsubmit="admSubmitAnnouncement(event)">
+        <div class="adm-form-row">
+          <div class="adm-form-group" style="flex:2"><label>Title *</label><input id="ann-title" required placeholder="Announcement title"></div>
+          <div class="adm-form-group"><label>Expires At (optional)</label><input id="ann-expires_at" type="datetime-local"></div>
+        </div>
+        <div class="adm-form-group full"><label>Body</label>
+          <textarea id="ann-body" rows="4" placeholder="Announcement content…"></textarea>
+        </div>
+        <div class="adm-form-submit">
+          <button type="submit" class="adm-submit-btn">Create Announcement</button>
+        </div>
+      </form>
+    </div>
+  </div><!-- /admin-sec-announcements -->
+
+  <!-- ── STAGING ── -->
+  <div id="admin-sec-staging" class="admin-section">
+    <div class="adm-section-hdr">Pending Chronicle Approvals</div>
+    <div id="adm-staging-empty" style="display:none;color:#2a3a4a;font-style:italic;padding:20px 0">No pending chronicle approvals.</div>
+    <div class="adm-table-wrap"><table class="adm-table">
+      <thead><tr>
+        <th>Title</th><th>Content</th><th>Date</th><th>Type</th><th>Scope</th><th>Source</th><th>Actions</th>
+      </tr></thead>
+      <tbody id="adm-staging-tbody"><tr><td colspan="7" class="no-data">Loading…</td></tr></tbody>
+    </table></div>
+  </div><!-- /admin-sec-staging -->
+</div><!-- /page-admin -->
+
+<script src="js/config.js"></script>
+<script src="js/core.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
