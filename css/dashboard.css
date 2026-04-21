@@ -86,6 +86,20 @@ h1 {
 .species-tab:hover { border-color: #5a3a4a; color: #9a6a7a; }
 .species-tab.active { background: #251020; border-color: #aa6088; color: #dd88aa; }
 
+/* ── Section filter tabs ── */
+.section-tab {
+  background: none;
+  border: 1px solid #2a3a30;
+  color: #4a7060;
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.section-tab:hover { border-color: #4a6a58; color: #7aaa90; }
+.section-tab.active { background: #0e2018; border-color: #40a870; color: #50cc88; }
+
 /* ── Stats ── */
 .stat-row {
   display: flex;

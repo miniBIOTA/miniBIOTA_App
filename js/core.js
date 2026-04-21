@@ -6,10 +6,11 @@ let allThreads     = [];
 let allObs         = [];
 let allLinks       = [];  // observation_loop_links
 let allThreadLinks = [];  // observation_thread_links
-let activeBiomeId   = null;   // null = All
-let activeSystemId  = null;   // null = All
-let activeSpeciesId = null;   // null = All
-let showResolved    = false;
+let activeBiomeId      = null;   // null = All
+let activeSystemId     = null;   // null = All
+let activeSpeciesId    = null;   // null = All
+let activeSectionFilter = null;  // null = All | "loops" | "threads" | "obs"
+let showResolved       = false;
 
 // Systems are fixed — not fetched from DB
 const SYSTEMS = [
@@ -65,6 +66,7 @@ async function loadAll() {
     buildBiomeTabs(biomes);
     buildSystemTabs();
     buildSpeciesTabs();
+    buildSectionTabs();
     render();
 
     const now = new Date();
@@ -74,6 +76,36 @@ async function loadAll() {
     document.getElementById("last-updated").textContent = "Error loading data";
     console.error(e);
   }
+}
+
+// ── Section filter tabs ──
+const SECTION_OPTIONS = [
+  { key: null,      label: "All" },
+  { key: "loops",   label: "Open Loops" },
+  { key: "threads", label: "Story Threads" },
+  { key: "obs",     label: "Observations" },
+];
+
+function buildSectionTabs() {
+  const container = document.getElementById("section-tabs");
+  container.innerHTML =
+    `<span class="filter-label">Show</span>` +
+    SECTION_OPTIONS.map(o =>
+      `<button class="section-tab ${activeSectionFilter === o.key ? "active" : ""}" onclick="setSectionFilter(${o.key === null ? "null" : `'${o.key}'`})">${o.label}</button>`
+    ).join("");
+}
+
+function setSectionFilter(type) {
+  activeSectionFilter = type;
+  buildSectionTabs();
+  applySectionVisibility();
+}
+
+function applySectionVisibility() {
+  const show = activeSectionFilter;
+  document.getElementById("section-loops").style.display   = (!show || show === "loops")   ? "" : "none";
+  document.getElementById("section-threads").style.display = (!show || show === "threads") ? "" : "none";
+  document.getElementById("section-obs").style.display     = (!show || show === "obs")     ? "" : "none";
 }
 
 // ── Biome tabs ──
@@ -197,8 +229,9 @@ function render() {
   renderLoops(openLoops, lastObsBySpecies);
   renderThreads(openLoops);
   renderObs(openLoops);
-  buildSystemTabs();  // refresh dimmed states after data renders
-  buildSpeciesTabs(); // rebuild from current open loops + threads
+  buildSystemTabs();       // refresh dimmed states after data renders
+  buildSpeciesTabs();      // rebuild from current open loops + threads
+  applySectionVisibility();
 }
 
 // ── Stats (always global, not filtered) ──
