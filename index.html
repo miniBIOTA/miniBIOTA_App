@@ -336,6 +336,10 @@
   <!-- ── SPECIES ── -->
   <div id="admin-sec-species" class="admin-section active">
     <div class="adm-section-hdr">Current Species</div>
+    <div class="adm-species-search-bar">
+      <input type="search" id="adm-species-search" placeholder="Search by name, scientific name, or alias…" oninput="admFilterSpecies()" autocomplete="off">
+      <span id="adm-species-search-count"></span>
+    </div>
     <div class="adm-table-wrap"><table class="adm-table" id="adm-species-table">
       <thead><tr>
         <th>Common Name</th><th>Scientific Name</th><th>Realm</th><th>Status</th>
@@ -381,6 +385,10 @@
             </div>
             <div class="adm-form-group full" style="margin-top:8px"><label>Hero Description</label>
               <textarea id="sp-species_description" rows="3" placeholder="Short description shown in the species hero section"></textarea>
+            </div>
+            <div class="adm-form-group full" style="margin-top:8px"><label>Other Known Names / Aliases</label>
+              <input id="sp-alternate_names" placeholder="e.g., glass anemone, rock anemone, pest anemone">
+              <span class="adm-form-help">Comma-separated — used for search lookup only, not displayed publicly.</span>
             </div>
           </div>
         </details>

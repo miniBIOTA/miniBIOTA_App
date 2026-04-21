@@ -960,3 +960,8 @@ details[open] .card-note { color: #8a9aaa; }
 .adm-img-actions { display: flex; gap: 4px; padding: 4px; flex-wrap: wrap; justify-content: center; }
 .adm-img-primary { font-size: 10px; color: #c8a040; padding: 2px 0; }
 .adm-section-hdr { font-size: 13px; font-weight: 600; color: #8899aa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; margin-top: 24px; border-bottom: 1px solid #1e2530; padding-bottom: 8px; }
+.adm-species-search-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.adm-species-search-bar input[type=search] { background: #0a0f16; border: 1px solid #1e2530; color: #c0ccd8; border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: inherit; outline: none; width: 320px; }
+.adm-species-search-bar input[type=search]:focus { border-color: #3a5a7a; }
+.adm-species-search-bar input[type=search]::placeholder { color: #3a4a5a; }
+#adm-species-search-count { font-size: 11px; color: #3a5a6a; display: none; }

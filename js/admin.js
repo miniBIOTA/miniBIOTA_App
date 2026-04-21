@@ -142,13 +142,37 @@ async function admLoadSpecies() {
   admPopulateChronicleSelects();
 }
 
-function admRenderSpeciesTable() {
+function admFilterSpecies() {
+  const q = (document.getElementById('adm-species-search')?.value || '').toLowerCase().trim();
+  if (!q) { admRenderSpeciesTable(); return; }
+  const filtered = admSpeciesList.filter(s =>
+    (s.common_name     || '').toLowerCase().includes(q) ||
+    (s.scientific_name || '').toLowerCase().includes(q) ||
+    (s.alternate_names || '').toLowerCase().includes(q)
+  );
+  admRenderSpeciesTable(filtered);
+}
+
+function admRenderSpeciesTable(list) {
+  const rows = list !== undefined ? list : admSpeciesList;
   const tbody = document.getElementById('adm-species-tbody');
-  if (!admSpeciesList.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="no-data">No species yet.</td></tr>';
+  const countEl = document.getElementById('adm-species-search-count');
+  const query = document.getElementById('adm-species-search')?.value.trim() || '';
+  if (countEl) {
+    if (query) {
+      countEl.textContent = `${rows.length} of ${admSpeciesList.length}`;
+      countEl.style.display = '';
+    } else {
+      countEl.style.display = 'none';
+    }
+  }
+  if (!rows.length) {
+    tbody.innerHTML = query
+      ? `<tr><td colspan="7" class="no-data">No species match "${escHtml(query)}".</td></tr>`
+      : '<tr><td colspan="7" class="no-data">No species yet.</td></tr>';
     return;
   }
-  tbody.innerHTML = admSpeciesList.map(s => {
+  tbody.innerHTML = rows.map(s => {
     const isRemoved = ['Extirpated', 'Removed'].includes(s.population_status);
     return `<tr style="${isRemoved ? 'opacity:0.5' : ''}">
       <td>${escHtml(s.common_name || '—')}</td>
@@ -192,7 +216,7 @@ async function admEditSpecies(id) {
   if (!s) return;
   admEditingSpeciesId = id;
   const fields = [
-    'common_name','scientific_name','realm','display_status','species_description',
+    'common_name','scientific_name','realm','display_status','species_description','alternate_names',
     'introduction_method','date_first_introduced','source_origin','identity_origin_notes',
     'current_estimated_population','population_status','carrying_capacity_status',
     'date_last_observed','population_dynamics_notes','trophic_level','feeding_method',
@@ -227,6 +251,7 @@ async function admSubmitSpecies(e) {
     display_status: admVal('sp-display_status') || 'active',
     main_biome: admGetCheckedBiomes() || null,
     species_description: admVal('sp-species_description') || null,
+    alternate_names: admVal('sp-alternate_names') || null,
     introduction_method: admVal('sp-introduction_method') || null,
     date_first_introduced: admVal('sp-date_first_introduced') || null,
     source_origin: admVal('sp-source_origin') || null,
