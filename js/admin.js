@@ -14,6 +14,11 @@ let admImgSpeciesId      = null;
 let admImgSpeciesSlug    = null;
 let admBiosphereId       = null;
 
+let admFilterRealm  = null;
+let admFilterBiome  = null;
+let admFilterType   = null;
+let admFilterStatus = null;
+
 // ── Utilities ──────────────────────────────────────────
 
 function admStorageUrl(bucket, filename) {
@@ -140,26 +145,71 @@ async function admLoadSpecies() {
   admRenderSpeciesTable();
   admPopulateBiomeCheckboxes();
   admPopulateChronicleSelects();
+  admRenderAllChips();
+}
+
+function admRenderChips(containerId, options, activeValue) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  const filterKey = containerId.replace('adm-', '').replace('-chips', '');
+  const mkBtn = (label, val) => {
+    const isActive = val === activeValue;
+    const valAttr = val === null ? 'null' : `'${val}'`;
+    return `<button class="adm-chip${isActive ? ' active' : ''}" onclick="admSetFilter('${filterKey}',${valAttr})">${escHtml(label)}</button>`;
+  };
+  wrap.innerHTML = mkBtn('All', null) + options.map(o => mkBtn(o, o)).join('');
+}
+
+function admSetFilter(key, value) {
+  if (key === 'realm')  admFilterRealm  = value;
+  if (key === 'biome')  admFilterBiome  = value;
+  if (key === 'type')   admFilterType   = value;
+  if (key === 'status') admFilterStatus = value;
+  admRenderAllChips();
+  admFilterSpecies();
+}
+
+function admRenderAllChips() {
+  admRenderChips('adm-realm-chips',
+    ['Freshwater', 'Saltwater', 'Terrestrial', 'Brackish'],
+    admFilterRealm);
+  admRenderChips('adm-biome-chips',
+    admBiomesList.map(b => b.public_name || b.name).filter(Boolean),
+    admFilterBiome);
+  admRenderChips('adm-type-chips',
+    ['Producer', 'Primary Consumer', 'Secondary Consumer', 'Detritivore', 'Scavenger'],
+    admFilterType);
+  admRenderChips('adm-status-chips',
+    ['Thriving', 'Established', 'Vulnerable', 'Uncertain', 'Extirpated', 'Removed'],
+    admFilterStatus);
 }
 
 function admFilterSpecies() {
   const q = (document.getElementById('adm-species-search')?.value || '').toLowerCase().trim();
-  if (!q) { admRenderSpeciesTable(); return; }
-  const filtered = admSpeciesList.filter(s =>
-    (s.common_name     || '').toLowerCase().includes(q) ||
-    (s.scientific_name || '').toLowerCase().includes(q) ||
-    (s.alternate_names || '').toLowerCase().includes(q)
-  );
-  admRenderSpeciesTable(filtered);
+  let list = admSpeciesList;
+
+  if (q) {
+    list = list.filter(s =>
+      (s.common_name     || '').toLowerCase().includes(q) ||
+      (s.scientific_name || '').toLowerCase().includes(q) ||
+      (s.alternate_names || '').toLowerCase().includes(q)
+    );
+  }
+  if (admFilterRealm)  list = list.filter(s => (s.realm             || '') === admFilterRealm);
+  if (admFilterBiome)  list = list.filter(s => (s.main_biome        || '').includes(admFilterBiome));
+  if (admFilterType)   list = list.filter(s => (s.trophic_level     || '') === admFilterType);
+  if (admFilterStatus) list = list.filter(s => (s.population_status || '') === admFilterStatus);
+
+  const anyActive = q || admFilterRealm || admFilterBiome || admFilterType || admFilterStatus;
+  admRenderSpeciesTable(anyActive ? list : undefined);
 }
 
 function admRenderSpeciesTable(list) {
   const rows = list !== undefined ? list : admSpeciesList;
   const tbody = document.getElementById('adm-species-tbody');
   const countEl = document.getElementById('adm-species-search-count');
-  const query = document.getElementById('adm-species-search')?.value.trim() || '';
   if (countEl) {
-    if (query) {
+    if (list !== undefined) {
       countEl.textContent = `${rows.length} of ${admSpeciesList.length}`;
       countEl.style.display = '';
     } else {
@@ -167,9 +217,7 @@ function admRenderSpeciesTable(list) {
     }
   }
   if (!rows.length) {
-    tbody.innerHTML = query
-      ? `<tr><td colspan="7" class="no-data">No species match "${escHtml(query)}".</td></tr>`
-      : '<tr><td colspan="7" class="no-data">No species yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="no-data">No species match the current filters.</td></tr>';
     return;
   }
   tbody.innerHTML = rows.map(s => {
@@ -505,6 +553,7 @@ async function admLoadBiomes() {
   admRenderBiomesTable();
   admPopulateBiomeCheckboxes();
   admPopulateChronicleSelects();
+  admRenderAllChips();
 }
 
 function admRenderBiomesTable() {

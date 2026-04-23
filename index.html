@@ -340,6 +340,24 @@
       <input type="search" id="adm-species-search" placeholder="Search by name, scientific name, or alias…" oninput="admFilterSpecies()" autocomplete="off">
       <span id="adm-species-search-count"></span>
     </div>
+    <div class="adm-species-filters">
+      <div class="adm-filter-row">
+        <span class="adm-filter-label">Realm</span>
+        <div id="adm-realm-chips" class="adm-filter-chips"></div>
+      </div>
+      <div class="adm-filter-row">
+        <span class="adm-filter-label">Biome</span>
+        <div id="adm-biome-chips" class="adm-filter-chips"></div>
+      </div>
+      <div class="adm-filter-row">
+        <span class="adm-filter-label">Type</span>
+        <div id="adm-type-chips" class="adm-filter-chips"></div>
+      </div>
+      <div class="adm-filter-row">
+        <span class="adm-filter-label">Status</span>
+        <div id="adm-status-chips" class="adm-filter-chips"></div>
+      </div>
+    </div>
     <div class="adm-table-wrap"><table class="adm-table" id="adm-species-table">
       <thead><tr>
         <th>Common Name</th><th>Scientific Name</th><th>Realm</th><th>Status</th>

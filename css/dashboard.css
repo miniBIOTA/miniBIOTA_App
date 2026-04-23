@@ -960,8 +960,15 @@ details[open] .card-note { color: #8a9aaa; }
 .adm-img-actions { display: flex; gap: 4px; padding: 4px; flex-wrap: wrap; justify-content: center; }
 .adm-img-primary { font-size: 10px; color: #c8a040; padding: 2px 0; }
 .adm-section-hdr { font-size: 13px; font-weight: 600; color: #8899aa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; margin-top: 24px; border-bottom: 1px solid #1e2530; padding-bottom: 8px; }
-.adm-species-search-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.adm-species-search-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .adm-species-search-bar input[type=search] { background: #0a0f16; border: 1px solid #1e2530; color: #c0ccd8; border-radius: 6px; padding: 7px 12px; font-size: 13px; font-family: inherit; outline: none; width: 320px; }
 .adm-species-search-bar input[type=search]:focus { border-color: #3a5a7a; }
 .adm-species-search-bar input[type=search]::placeholder { color: #3a4a5a; }
 #adm-species-search-count { font-size: 11px; color: #3a5a6a; display: none; }
+.adm-species-filters { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.adm-filter-row { display: flex; align-items: center; gap: 8px; }
+.adm-filter-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #3a4a5a; white-space: nowrap; min-width: 46px; }
+.adm-filter-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.adm-chip { background: none; border: 1px solid #2a3545; color: #5a6a7a; border-radius: 20px; padding: 3px 10px; font-size: 11px; cursor: pointer; transition: all 0.12s; font-family: inherit; }
+.adm-chip:hover { border-color: #4a5565; color: #8a9aaa; }
+.adm-chip.active { background: #1a2530; border-color: #5a8aaa; color: #8abbd4; }
