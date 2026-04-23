@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
 function createWindow() {
@@ -11,13 +11,26 @@ function createWindow() {
     icon: path.join(__dirname, 'assets', 'icon.ico'),
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
   win.loadFile('index.html');
   win.setMenuBarVisibility(false);
 }
+
+ipcMain.handle('reindex-media', async (event, folder) => {
+  try {
+    const indexMedia = require('./tools/indexer-core');
+    const result = await indexMedia(folder, (progress) => {
+      event.sender.send('reindex-progress', progress);
+    });
+    return { success: true, ...result };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
 
 app.whenReady().then(createWindow);
 

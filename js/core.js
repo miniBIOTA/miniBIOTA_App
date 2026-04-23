@@ -860,7 +860,7 @@ function renderPurchases(purchases) {
 
 // ── Page switching ──
 function showPage(page) {
-  ["story", "checklist", "tasks", "financials", "sales", "roadmap", "admin"].forEach(p => {
+  ["story", "checklist", "tasks", "financials", "sales", "roadmap", "admin", "calendar"].forEach(p => {
     document.getElementById("page-" + p).classList.toggle("hidden", page !== p);
     document.getElementById("tab-" + p).classList.toggle("active", page === p);
   });
@@ -870,24 +870,32 @@ function showPage(page) {
   if (page === "financials") { loadFinancials(); }
   if (page === "sales")      { loadSales(); }
   if (page === "roadmap")    { loadRoadmap(); }
+  if (page === "calendar")   { loadCalendar(); }
   if (page === "admin" && !admLoaded) { admLoadAll(); admLoaded = true; }
 }
 
 // ── Checklist definitions ──
 const CHECKLIST_ITEMS = {
   plan: [
-    { id: "p1", label: "Identify longform story for the week", sub: "or select a fallback: Flex week / Story bank / Lane 3 fill" },
-    { id: "p2", label: "Map 3 mid forms to biosphere tasks or live events", sub: "each one raises a question the longform will answer" },
+    { id: "p1", label: "Identify longform story for the week",              sub: "or select a fallback: Flex week / Story bank / Lane 3 fill" },
+    { id: "p2", label: "Review active observations for short opportunities", sub: "Which threads have new data? What questions are unanswered?" },
+  ],
+  short: [
+    { id: "film",    label: "Filmed",                                sub: "Vertical, under 60 seconds — capture the moment as it happens" },
+    { id: "edit",    label: "Edited to under 60 seconds" },
+    { id: "caption", label: "Caption written",                       sub: "Hook in first line, open question at end — no em dashes" },
+    { id: "yt",      label: "YouTube Shorts — uploaded",             sub: "Title, hashtags, link in description" },
+    { id: "ig",      label: "Instagram Reels — uploaded",            sub: "First 125 chars land the hook" },
+    { id: "tt",      label: "TikTok — uploaded",                     sub: "1–2 punchy sentences" },
+    { id: "fb",      label: "Facebook Reels — native upload" },
+    { id: "pipe",    label: "Pipeline record logged",                sub: "format=short, source_observation_id, platform_urls, notes" },
   ],
   mf: [
-    { id: "film",     label: "Filmed",                                  sub: "Unpolished and real — capture the moment as it happens" },
-    { id: "edit",     label: "Edited to 61 sec – 3 min" },
-    { id: "caption",  label: "Master caption written",                   sub: "2–4 sentences, no em dashes — all platforms derive from this" },
-    { id: "yt",       label: "YouTube — standard upload (not Shorts)",   sub: "Title, description + Patreon/Ko-fi links, thumbnail, tags, end screen" },
-    { id: "fb",       label: "Facebook — native upload",                 sub: "First 2–3 sentences of caption. Do not post a YouTube link." },
-    { id: "ig",       label: "Instagram Reels",                          sub: "Hook lands in first 125 characters" },
-    { id: "tt",       label: "TikTok",                                   sub: "1–2 punchy sentences" },
-    { id: "pipe",     label: "Pipeline record logged",                   sub: "status=published, published_url, published_date" },
+    { id: "film",    label: "Filmed",                                  sub: "Unpolished and real — capture the moment as it happens" },
+    { id: "edit",    label: "Edited to 61 sec – 5 min" },
+    { id: "caption", label: "Master caption written",                  sub: "2–4 sentences, no em dashes" },
+    { id: "yt",      label: "YouTube — standard upload (not Shorts)",  sub: "Title, description + Patreon/Ko-fi links, thumbnail, tags, end screen" },
+    { id: "pipe",    label: "Pipeline record logged",                  sub: "format=mid, status=published, published_url, published_date" },
   ],
   lf: [
     { id: "script",   label: "Script locked" },
@@ -921,33 +929,35 @@ function buildCalDays() {
       name: "Monday",
       parts: [
         { label: "Planning", items: CHECKLIST_ITEMS.plan, prefix: "plan", fallback: true },
-        { label: "Mid Form 1", titleKey: "mf1", items: CHECKLIST_ITEMS.mf, prefix: "mf1" },
+        { label: "Daily Short", titleKey: "s1", items: CHECKLIST_ITEMS.short, prefix: "s1" },
       ]
     },
     {
       name: "Tuesday",
       parts: [
-        { label: "Mid Form 2", titleKey: "mf2", items: CHECKLIST_ITEMS.mf, prefix: "mf2" },
+        { label: "Daily Short", titleKey: "s2", items: CHECKLIST_ITEMS.short, prefix: "s2" },
       ]
     },
     {
       name: "Wednesday",
       parts: [
-        { label: "Mid Form 3", titleKey: "mf3", items: CHECKLIST_ITEMS.mf, prefix: "mf3" },
+        { label: "Daily Short", titleKey: "s3", items: CHECKLIST_ITEMS.short, prefix: "s3" },
         { label: "Longform", items: CHECKLIST_ITEMS.lf.filter(i => LF_WED.includes(i.id)), prefix: "lf" },
       ]
     },
     {
       name: "Thursday",
       parts: [
+        { label: "Daily Short", titleKey: "s4", items: CHECKLIST_ITEMS.short, prefix: "s4" },
         { label: "Longform", items: CHECKLIST_ITEMS.lf.filter(i => LF_THU.includes(i.id)), prefix: "lf" },
       ]
     },
     {
       name: "Friday",
       parts: [
+        { label: "Daily Short", titleKey: "s5", items: CHECKLIST_ITEMS.short, prefix: "s5" },
         { label: "Longform", titleKey: "lf", items: CHECKLIST_ITEMS.lf.filter(i => LF_FRI_IDS.includes(i.id)), prefix: "lf" },
-        { label: "End of Week", items: CHECKLIST_ITEMS.eow, prefix: "eow" },
+        { label: "Sunday Close", items: CHECKLIST_ITEMS.eow, prefix: "eow" },
       ]
     },
   ];
@@ -1044,10 +1054,11 @@ function updateProgress(elemId, prefix, items) {
 }
 
 function updateAllProgress() {
-  updateProgress("prog-plan", "plan", CHECKLIST_ITEMS.plan);
-  ["mf1","mf2","mf3"].forEach(mf => updateProgress("prog-" + mf, mf, CHECKLIST_ITEMS.mf));
-  updateProgress("prog-lf",  "lf",  CHECKLIST_ITEMS.lf);
-  updateProgress("prog-eow", "eow", CHECKLIST_ITEMS.eow);
+  updateProgress("prog-plan",  "plan",  CHECKLIST_ITEMS.plan);
+  updateProgress("prog-short", "short", CHECKLIST_ITEMS.short);
+  updateProgress("prog-mf",    "mf",    CHECKLIST_ITEMS.mf);
+  updateProgress("prog-lf",    "lf",    CHECKLIST_ITEMS.lf);
+  updateProgress("prog-eow",   "eow",   CHECKLIST_ITEMS.eow);
 }
 
 function renderChecklist() {
@@ -1056,16 +1067,15 @@ function renderChecklist() {
     const btn = document.getElementById("fb-" + f);
     if (btn) btn.classList.toggle("active", clFallback === f);
   });
-  ["mf1","mf2","mf3","lf"].forEach(key => {
+  ["short","mf","lf"].forEach(key => {
     const inp = document.getElementById("title-" + key);
     if (inp) inp.value = clTitles[key] || "";
   });
-  renderCheckItems("cl-plan", CHECKLIST_ITEMS.plan, "plan");
-  renderCheckItems("cl-mf1",  CHECKLIST_ITEMS.mf,   "mf1");
-  renderCheckItems("cl-mf2",  CHECKLIST_ITEMS.mf,   "mf2");
-  renderCheckItems("cl-mf3",  CHECKLIST_ITEMS.mf,   "mf3");
-  renderCheckItems("cl-lf",   CHECKLIST_ITEMS.lf,   "lf");
-  renderCheckItems("cl-eow",  CHECKLIST_ITEMS.eow,  "eow");
+  renderCheckItems("cl-plan",  CHECKLIST_ITEMS.plan,  "plan");
+  renderCheckItems("cl-short", CHECKLIST_ITEMS.short, "short");
+  renderCheckItems("cl-mf",    CHECKLIST_ITEMS.mf,    "mf");
+  renderCheckItems("cl-lf",    CHECKLIST_ITEMS.lf,    "lf");
+  renderCheckItems("cl-eow",   CHECKLIST_ITEMS.eow,   "eow");
   updateAllProgress();
 }
 

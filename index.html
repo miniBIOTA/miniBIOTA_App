@@ -17,6 +17,7 @@
     <button class="page-tab" id="tab-financials" onclick="showPage('financials')">Financials</button>
     <button class="page-tab" id="tab-sales" onclick="showPage('sales')">Sales Pipeline</button>
     <button class="page-tab" id="tab-roadmap" onclick="showPage('roadmap')">Roadmap</button>
+    <button class="page-tab" id="tab-calendar" onclick="showPage('calendar')">Content Calendar</button>
     <button class="page-tab" id="tab-admin" onclick="showPage('admin')">Site Admin</button>
   </div>
   <button class="refresh-btn" id="refresh-btn" onclick="loadAll()" style="margin-left:16px">Refresh</button>
@@ -92,40 +93,30 @@
     <div id="cl-plan"></div>
   </div>
 
-  <!-- Mid Form 1 -->
+  <!-- Daily Short -->
   <div class="cl-section">
     <div class="cl-section-header">
-      <span class="cl-section-title">Mid Form 1</span>
-      <span class="cl-progress" id="prog-mf1">—</span>
+      <span class="cl-section-title" style="color:#20b090">Daily Short</span>
+      <span class="cl-progress" id="prog-short">—</span>
     </div>
-    <input class="cl-title-input" id="title-mf1" placeholder="Story title or topic..." oninput="saveTitle('mf1', this.value)">
-    <div id="cl-mf1"></div>
+    <input class="cl-title-input" id="title-short" placeholder="Today's observation / story..." oninput="saveTitle('short', this.value)">
+    <div id="cl-short"></div>
   </div>
 
-  <!-- Mid Form 2 -->
+  <!-- Mid Form (as warranted) -->
   <div class="cl-section">
     <div class="cl-section-header">
-      <span class="cl-section-title">Mid Form 2</span>
-      <span class="cl-progress" id="prog-mf2">—</span>
+      <span class="cl-section-title" style="color:#8878cc">Mid Form</span>
+      <span class="cl-progress" id="prog-mf">—</span>
     </div>
-    <input class="cl-title-input" id="title-mf2" placeholder="Story title or topic..." oninput="saveTitle('mf2', this.value)">
-    <div id="cl-mf2"></div>
+    <input class="cl-title-input" id="title-mf" placeholder="Story title or topic..." oninput="saveTitle('mf', this.value)">
+    <div id="cl-mf"></div>
   </div>
 
-  <!-- Mid Form 3 -->
+  <!-- Longform -->
   <div class="cl-section">
     <div class="cl-section-header">
-      <span class="cl-section-title">Mid Form 3</span>
-      <span class="cl-progress" id="prog-mf3">—</span>
-    </div>
-    <input class="cl-title-input" id="title-mf3" placeholder="Story title or topic..." oninput="saveTitle('mf3', this.value)">
-    <div id="cl-mf3"></div>
-  </div>
-
-  <!-- True Longform -->
-  <div class="cl-section">
-    <div class="cl-section-header">
-      <span class="cl-section-title">True Longform</span>
+      <span class="cl-section-title" style="color:#c8a040">Longform</span>
       <span class="cl-progress" id="prog-lf">—</span>
     </div>
     <div class="fallback-row">
@@ -134,14 +125,14 @@
       <button class="fallback-btn" id="fb-bank" onclick="setFallback('bank')">Story bank</button>
       <button class="fallback-btn" id="fb-lane3" onclick="setFallback('lane3')">Lane 3 fill</button>
     </div>
-    <input class="cl-title-input" id="title-lf" placeholder="Video title..." oninput="saveTitle('lf', this.value)">
+    <input class="cl-title-input" id="title-lf" placeholder="Episode title..." oninput="saveTitle('lf', this.value)">
     <div id="cl-lf"></div>
   </div>
 
-  <!-- End of Week -->
+  <!-- Sunday / End of Week -->
   <div class="cl-section">
     <div class="cl-section-header">
-      <span class="cl-section-title">End of Week</span>
+      <span class="cl-section-title">Sunday Close</span>
       <span class="cl-progress" id="prog-eow">—</span>
     </div>
     <div id="cl-eow"></div>
@@ -321,6 +312,176 @@
 
 </div><!-- /page-roadmap -->
 
+<!-- ══════════════════════════════════════ CONTENT CALENDAR ══════════════════════════════════════ -->
+<div id="page-calendar" class="hidden">
+
+  <div class="cal-page-header">
+    <div class="cal-view-toggle">
+      <button class="cal-view-btn active" id="cal-view-board" onclick="setCalPageView('board')">Board</button>
+      <button class="cal-view-btn" id="cal-view-week" onclick="setCalPageView('week')">Calendar</button>
+    </div>
+    <button class="cal-add-btn" onclick="openAddModal()">+ Schedule Story</button>
+    <button class="tasks-clear-btn" onclick="loadCalendar()">Refresh</button>
+  </div>
+
+  <div class="cal-page-subtitle" id="cal-page-subtitle">Loading...</div>
+
+  <!-- Stats -->
+  <div class="cal-stat-row">
+    <div class="cal-stat">
+      <div class="cal-stat-num" id="cal-stat-planned">—</div>
+      <div class="cal-stat-label">Planned</div>
+    </div>
+    <div class="cal-stat">
+      <div class="cal-stat-num" id="cal-stat-inprod">—</div>
+      <div class="cal-stat-label">In Production</div>
+    </div>
+    <div class="cal-stat">
+      <div class="cal-stat-num" id="cal-stat-yt-loops">—</div>
+      <div class="cal-stat-label">YouTube Loops</div>
+    </div>
+    <div class="cal-stat">
+      <div class="cal-stat-num" id="cal-stat-sh-loops">—</div>
+      <div class="cal-stat-label">Shorts Loops</div>
+    </div>
+  </div>
+
+  <!-- Board View -->
+  <div id="cal-board-view">
+    <div class="cal-board">
+      <div class="cal-format-col">
+        <div class="cal-col-header fmt-short">Shorts <span style="font-size:10px;font-weight:400;opacity:0.6">30–60 sec · vertical</span></div>
+        <div class="cal-col-body fmt-short" id="cal-col-short"><div class="loading">Loading...</div></div>
+        <button class="cal-col-add" onclick="openAddModal('short')">+ Add Short</button>
+      </div>
+      <div class="cal-format-col">
+        <div class="cal-col-header fmt-mid">Mids <span style="font-size:10px;font-weight:400;opacity:0.6">61 sec–5 min · YouTube</span></div>
+        <div class="cal-col-body fmt-mid" id="cal-col-mid"><div class="loading">Loading...</div></div>
+        <button class="cal-col-add" onclick="openAddModal('mid')">+ Add Mid</button>
+      </div>
+      <div class="cal-format-col">
+        <div class="cal-col-header fmt-longform">Longforms <span style="font-size:10px;font-weight:400;opacity:0.6">~10 min · Fri/Sat</span></div>
+        <div class="cal-col-body fmt-longform" id="cal-col-longform"><div class="loading">Loading...</div></div>
+        <button class="cal-col-add" onclick="openAddModal('longform')">+ Add Longform</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Calendar View (Week + Month sub-views) -->
+  <div id="cal-week-view" class="hidden">
+    <div class="cal-sub-toggle">
+      <button class="cal-sub-btn active" id="cal-sub-week"  onclick="setCalSubView('week')">Week</button>
+      <button class="cal-sub-btn"        id="cal-sub-month" onclick="setCalSubView('month')">Month</button>
+    </div>
+
+    <div id="cal-week-subview">
+      <div class="cal-week-nav">
+        <button class="cal-week-nav-btn" onclick="calPrevWeek()">←</button>
+        <span id="cal-week-label">—</span>
+        <button class="cal-week-nav-btn" onclick="calNextWeek()">→</button>
+        <button class="cal-week-nav-btn today" onclick="calThisWeek()">Today</button>
+      </div>
+      <div id="cal-week-grid"></div>
+    </div>
+
+    <div id="cal-month-subview" class="hidden">
+      <div class="cal-week-nav">
+        <button class="cal-week-nav-btn" onclick="calPrevMonth()">←</button>
+        <span id="cal-month-label">—</span>
+        <button class="cal-week-nav-btn" onclick="calNextMonth()">→</button>
+        <button class="cal-week-nav-btn today" onclick="calThisMonth()">Today</button>
+      </div>
+      <div id="cal-month-grid"></div>
+    </div>
+  </div>
+
+  <!-- Loop Panel -->
+  <div class="cal-loop-panel">
+    <div class="cal-loop-panel-header">
+      <span class="cal-loop-panel-title">Open Loops</span>
+      <span id="cal-loop-count">—</span>
+      <button class="cal-loop-eco-btn active" data-eco="all"     onclick="setLoopEco('all')">All</button>
+      <button class="cal-loop-eco-btn"        data-eco="youtube" onclick="setLoopEco('youtube')">YouTube</button>
+      <button class="cal-loop-eco-btn"        data-eco="shorts"  onclick="setLoopEco('shorts')">Shorts</button>
+    </div>
+    <div class="cal-loops-grid" id="cal-loops-container"><div class="loading">Loading...</div></div>
+  </div>
+
+</div><!-- /page-calendar -->
+
+<!-- Calendar Add/Edit Modal -->
+<div id="cal-modal" class="cal-modal-overlay hidden" onclick="if(event.target===this)closeCalModal()">
+  <div class="cal-modal">
+    <div class="cal-modal-header">
+      <span class="cal-modal-title" id="cal-modal-title">Schedule a Story</span>
+      <button class="cal-modal-close" onclick="closeCalModal()">✕</button>
+    </div>
+    <form onsubmit="submitCalEntry(event)">
+      <input type="hidden" id="cal-entry-id">
+      <div class="cal-form-group">
+        <label>Story Title *</label>
+        <input id="cal-entry-title" placeholder="Working title or story idea" required>
+      </div>
+      <div class="cal-form-row">
+        <div class="cal-form-group">
+          <label>Format *</label>
+          <select id="cal-entry-format" required>
+            <option value="short">Short (30–60 sec)</option>
+            <option value="mid">Mid (61 sec–5 min)</option>
+            <option value="longform">Longform (~10 min)</option>
+          </select>
+        </div>
+        <div class="cal-form-group">
+          <label>Status</label>
+          <select id="cal-entry-status">
+            <option value="planned">Planned</option>
+            <option value="in_production">In Production</option>
+            <option value="published">Published</option>
+          </select>
+        </div>
+      </div>
+      <div class="cal-form-row">
+        <div class="cal-form-group">
+          <label>Date</label>
+          <input id="cal-entry-date" type="date">
+        </div>
+        <div class="cal-form-group">
+          <label>Time</label>
+          <input id="cal-entry-time" type="time">
+        </div>
+      </div>
+      <div class="cal-form-group">
+        <label>Story Notes / Angle</label>
+        <textarea id="cal-entry-notes" placeholder="What's the hook? What observation does this come from?"></textarea>
+      </div>
+      <div class="cal-form-group">
+        <label>Thread IDs (comma-separated)</label>
+        <input id="cal-entry-threads" placeholder="e.g. 1, 5, 12">
+        <span class="cal-form-help">Story thread IDs this piece draws from</span>
+      </div>
+      <div class="cal-form-group">
+        <label>Loops This Closes <span class="cal-lpc-badge" id="cal-lpc-count"></span></label>
+        <div class="cal-lpc-filter">
+          <button type="button" class="cal-lpc-btn active" data-filter="all"     onclick="setLpcFilter('all')">All</button>
+          <button type="button" class="cal-lpc-btn"        data-filter="youtube" onclick="setLpcFilter('youtube')">YouTube</button>
+          <button type="button" class="cal-lpc-btn"        data-filter="shorts"  onclick="setLpcFilter('shorts')">Shorts</button>
+        </div>
+        <div class="cal-lpc" id="cal-lpc"><div style="padding:10px 12px;color:#3a5060;font-size:12px">Loading loops...</div></div>
+      </div>
+      <div class="cal-form-group">
+        <label>Loops This Opens</label>
+        <input id="cal-entry-loops-opening" placeholder="Loop IDs of new loops to seed (comma-separated)">
+        <span class="cal-form-help">Pre-create loops in the tracker first, then enter their IDs here</span>
+      </div>
+      <div class="cal-modal-actions">
+        <button type="button" class="cal-delete-btn" id="cal-delete-btn" onclick="deleteCalEntry()" style="display:none">Delete</button>
+        <button type="button" class="cal-cancel-btn" onclick="closeCalModal()">Cancel</button>
+        <button type="submit" class="cal-submit-btn" id="cal-submit-btn">Add to Calendar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════ SITE ADMIN ══════════════════════════════════════ -->
 <div id="page-admin" class="hidden">
   <div class="admin-subnav">
@@ -330,6 +491,7 @@
     <button class="admin-subnav-btn"        id="adm-btn-chronicles"    onclick="showAdminSection('chronicles')">Chronicles</button>
     <button class="admin-subnav-btn"        id="adm-btn-announcements" onclick="showAdminSection('announcements')">Announcements</button>
     <button class="admin-subnav-btn"        id="adm-btn-staging"       onclick="showAdminSection('staging')">Staging</button>
+    <button class="admin-subnav-btn"        id="adm-btn-media"         onclick="showAdminSection('media')">Media Library</button>
   </div>
   <div id="admin-status" class="admin-status"></div>
 
@@ -862,10 +1024,47 @@
       <tbody id="adm-staging-tbody"><tr><td colspan="7" class="no-data">Loading…</td></tr></tbody>
     </table></div>
   </div><!-- /admin-sec-staging -->
+
+  <!-- ── MEDIA LIBRARY ── -->
+  <div id="admin-sec-media" class="admin-section">
+    <div class="adm-section-hdr">Media Library
+      <span class="count-badge" id="media-total-badge" style="margin-left:8px">—</span>
+    </div>
+
+    <div class="media-filter-bar">
+      <input type="search" id="media-search" placeholder="Search filename or description…" oninput="mediaSearchDebounce()" autocomplete="off">
+      <div class="media-type-btns">
+        <button class="media-type-btn active" id="media-tbtn-all"   onclick="mediaSetType('')">All</button>
+        <button class="media-type-btn"        id="media-tbtn-photo" onclick="mediaSetType('photo')">Photos</button>
+        <button class="media-type-btn"        id="media-tbtn-video" onclick="mediaSetType('video')">Videos</button>
+      </div>
+      <select id="media-year" onchange="mediaReload()" class="media-year-select">
+        <option value="">All years</option>
+        <option>2026</option><option>2025</option><option>2024</option>
+        <option>2023</option><option>2022</option><option>2021</option>
+        <option>2020</option><option>2019</option>
+      </select>
+      <button class="media-unreviewed-btn" id="media-tbtn-unreviewed" onclick="mediaToggleUnreviewed()">Unreviewed only</button>
+      <button class="media-reindex-btn" id="media-reindex-btn" onclick="mediaReindex()">Re-index folder</button>
+      <span class="media-count-label" id="media-count-label"></span>
+    </div>
+
+    <div class="media-layout">
+      <div class="media-list-col">
+        <div id="media-list"><div class="loading" style="padding:16px">Loading…</div></div>
+        <div class="media-pagination" id="media-pagination"></div>
+      </div>
+      <div class="media-panel-col" id="media-panel-col">
+        <div class="media-panel-placeholder">← Select a file to tag it</div>
+      </div>
+    </div>
+  </div><!-- /admin-sec-media -->
+
 </div><!-- /page-admin -->
 
 <script src="js/config.js"></script>
 <script src="js/core.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/calendar.js"></script>
 </body>
 </html>

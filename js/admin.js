@@ -120,6 +120,7 @@ function showAdminSection(section) {
     if (section === 'chronicles')    admLoadChronicles();
     if (section === 'announcements') admLoadAnnouncements();
     if (section === 'staging')       admLoadStaging();
+    if (section === 'media')         admLoadMedia();
   }
 }
 
@@ -919,4 +920,595 @@ async function admRejectStaging(id) {
   });
   if (r.ok) { admStatus('Chronicle rejected.', 'ok'); admLoadStaging(); }
   else admStatus('Error rejecting chronicle.', 'err');
+}
+
+// ════════════════════════════════════════════════════════
+//  MEDIA LIBRARY
+// ════════════════════════════════════════════════════════
+
+let mediaPage           = 0;
+const MEDIA_PAGE_SIZE   = 50;
+let mediaTypeFilter     = '';
+let mediaYearFilter     = '';
+let mediaSearchQuery    = '';
+let mediaSearchTimer    = null;
+let mediaTotal          = 0;
+let mediaSelectedId     = null;
+let mediaPendingTags    = []; // [{id, name, category}] — id null for new tags
+let mediaCurrentState   = null; // {asset, taggedSpecies, taggedBiomes, taggedSystems, taggedChronicle}
+let mediaActiveTab      = 'view';
+let mediaShowUnreviewed = false;
+
+const MEDIA_SYSTEMS = [
+  { id: 1, name: 'Climate' },       { id: 2, name: 'Rain' },           { id: 3, name: 'Lighting' },
+  { id: 4, name: 'Wave & Tide' },   { id: 5, name: 'Control System' }, { id: 6, name: 'Enclosure' }
+];
+
+function mediaFileUrl(localPath) {
+  return 'file:///' + localPath.replace(/\\/g, '/');
+}
+
+function mediaSizeStr(bytes) {
+  if (!bytes) return '';
+  if (bytes > 1073741824) return (bytes / 1073741824).toFixed(1) + ' GB';
+  if (bytes > 1048576)    return (bytes / 1048576).toFixed(0) + ' MB';
+  return (bytes / 1024).toFixed(0) + ' KB';
+}
+
+async function mediaApiFetch(path) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: { ...HEADERS, 'Prefer': 'count=exact' }
+  });
+  const data = await res.json();
+  const range = res.headers.get('Content-Range') || '';
+  const total = parseInt(range.split('/')[1]) || 0;
+  return { data, total };
+}
+
+async function admLoadMedia() {
+  document.getElementById('media-list').innerHTML = '<div class="loading" style="padding:16px">Loading…</div>';
+
+  const offset = mediaPage * MEDIA_PAGE_SIZE;
+  let params = `media_assets?select=id,filename,local_path,file_type,captured_date,size_bytes,reviewed,media_species(media_id)` +
+               `&order=captured_date.desc,filename.asc&limit=${MEDIA_PAGE_SIZE}&offset=${offset}`;
+
+  if (mediaTypeFilter)     params += `&file_type=eq.${mediaTypeFilter}`;
+  if (mediaYearFilter)     params += `&captured_date=gte.${mediaYearFilter}-01-01&captured_date=lte.${mediaYearFilter}-12-31`;
+  if (mediaShowUnreviewed) params += `&reviewed=eq.false`;
+  if (mediaSearchQuery) {
+    const q = mediaSearchQuery.replace(/['"&?]/g, '');
+    params += `&filename=ilike.*${q}*`;
+  }
+
+  const { data, total } = await mediaApiFetch(params);
+  mediaTotal = total;
+
+  document.getElementById('media-total-badge').textContent = total.toLocaleString();
+  document.getElementById('media-count-label').textContent = total
+    ? `${offset + 1}–${Math.min(offset + data.length, total)} of ${total.toLocaleString()}`
+    : '0 results';
+
+  mediaRenderList(data);
+  mediaRenderPagination();
+}
+
+function mediaReload() {
+  mediaYearFilter = document.getElementById('media-year').value;
+  mediaPage = 0;
+  admLoadMedia();
+}
+
+function mediaSetType(type) {
+  mediaTypeFilter = type;
+  ['all', 'photo', 'video'].forEach(t => {
+    const btn = document.getElementById(`media-tbtn-${t}`);
+    if (btn) btn.classList.toggle('active', t === (type || 'all'));
+  });
+  mediaPage = 0;
+  admLoadMedia();
+}
+
+function mediaToggleUnreviewed() {
+  mediaShowUnreviewed = !mediaShowUnreviewed;
+  const btn = document.getElementById('media-tbtn-unreviewed');
+  if (btn) btn.classList.toggle('active', mediaShowUnreviewed);
+  mediaPage = 0;
+  admLoadMedia();
+}
+
+function mediaSearchDebounce() {
+  clearTimeout(mediaSearchTimer);
+  mediaSearchTimer = setTimeout(() => {
+    mediaSearchQuery = document.getElementById('media-search').value.trim();
+    mediaPage = 0;
+    admLoadMedia();
+  }, 350);
+}
+
+function mediaRenderList(records) {
+  const container = document.getElementById('media-list');
+  if (!records || !records.length) {
+    container.innerHTML = '<div class="no-data" style="padding:20px;text-align:center">No files found.</div>';
+    return;
+  }
+  container.innerHTML = records.map(r => {
+    const isPhoto    = r.file_type === 'photo';
+    const isSelected = r.id === mediaSelectedId;
+    const hasSpecies = r.media_species && r.media_species.length > 0;
+    const name = r.filename.length > 38 ? r.filename.slice(0, 36) + '…' : r.filename;
+    // reviewed=true → green ✓ · has species but not reviewed → yellow ◑ · nothing → blank
+    const statusBadge = r.reviewed
+      ? '<span class="media-row-reviewed">✓</span>'
+      : hasSpecies ? '<span class="media-row-partial">◑</span>' : '';
+    return `<div class="media-row${isSelected ? ' active' : ''}" onclick="mediaSelectAsset(${r.id})" data-id="${r.id}">
+      <span class="media-type-dot ${isPhoto ? 'photo' : 'video'}"></span>
+      <span class="media-row-name" title="${escHtml(r.filename)}">${escHtml(name)}</span>
+      <span class="media-row-date">${r.captured_date || '—'}</span>
+      <span class="media-row-badge ${isPhoto ? 'photo' : 'video'}">${isPhoto ? 'ph' : 'vd'}</span>
+      ${statusBadge}
+    </div>`;
+  }).join('');
+}
+
+function mediaRenderPagination() {
+  const totalPages = Math.ceil(mediaTotal / MEDIA_PAGE_SIZE);
+  const el = document.getElementById('media-pagination');
+  if (totalPages <= 1) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <button class="media-page-btn" onclick="mediaChangePage(-1)" ${mediaPage === 0 ? 'disabled' : ''}>← Prev</button>
+    <span class="media-page-info">Page ${mediaPage + 1} of ${totalPages}</span>
+    <button class="media-page-btn" onclick="mediaChangePage(1)" ${mediaPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>
+  `;
+}
+
+function mediaChangePage(delta) {
+  mediaPage += delta;
+  admLoadMedia();
+  document.getElementById('media-list').scrollTop = 0;
+}
+
+async function mediaSelectAsset(id) {
+  mediaSelectedId = id;
+  mediaActiveTab  = 'view';
+  document.querySelectorAll('.media-row').forEach(r => {
+    r.classList.toggle('active', parseInt(r.dataset.id) === id);
+  });
+
+  const panel = document.getElementById('media-panel-col');
+  panel.innerHTML = '<div class="loading" style="padding:20px">Loading…</div>';
+  panel.scrollTop = 0;
+
+  const [asset, speciesTags, biomeTags, systemTags, chronicleLinks, tagLinks] = await Promise.all([
+    api(`media_assets?id=eq.${id}&select=*`).then(d => d[0]),
+    api(`media_species?media_id=eq.${id}&select=species_id`),
+    api(`media_biomes?media_id=eq.${id}&select=biome_id`),
+    api(`media_systems?media_id=eq.${id}&select=system_id`),
+    api(`media_chronicles?media_id=eq.${id}&select=chronicle_id`),
+    api(`media_tag_links?media_id=eq.${id}&select=tag_id,media_tags(id,name,category)`)
+  ]);
+
+  mediaCurrentState = {
+    asset,
+    taggedSpecies:   new Set(speciesTags.map(t => t.species_id)),
+    taggedBiomes:    new Set(biomeTags.map(t => t.biome_id)),
+    taggedSystems:   new Set(systemTags.map(t => t.system_id)),
+    taggedChronicle: chronicleLinks.length ? chronicleLinks[0].chronicle_id : null
+  };
+  mediaPendingTags = tagLinks.map(t => ({ id: t.media_tags.id, name: t.media_tags.name, category: t.media_tags.category }));
+
+  mediaRenderPanel();
+}
+
+function mediaRenderPanel() {
+  if (!mediaCurrentState) return;
+  const { asset } = mediaCurrentState;
+  const isPhoto = asset.file_type === 'photo';
+  const fileUrl = mediaFileUrl(asset.local_path);
+
+  const previewHtml = isPhoto
+    ? `<img src="${escHtml(fileUrl)}" alt="${escHtml(asset.filename)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'media-preview-video\\'>Image not found on disk</div>'">`
+    : `<video src="${escHtml(fileUrl)}" controls preload="metadata"
+         onerror="this.parentElement.innerHTML='<div class=\\'media-preview-video\\'>Cannot play this format in-app.<br><span style=\\'font-size:10px;color:#2a4050\\'>Copy path below and open in your media player.</span></div>'">
+       </video>`;
+
+  const reviewedClass = asset.reviewed ? 'media-reviewed-badge reviewed' : 'media-reviewed-badge';
+  const reviewedLabel = asset.reviewed ? '✓ Reviewed' : 'Unreviewed';
+  const reviewBtnLabel = asset.reviewed ? 'Mark Unreviewed' : 'Mark as Reviewed';
+
+  document.getElementById('media-panel-col').innerHTML = `
+    <div class="media-panel">
+      <div class="media-panel-header">
+        <div class="media-tabs">
+          <button class="media-tab${mediaActiveTab === 'view' ? ' active' : ''}" onclick="mediaShowTab('view')">View</button>
+          <button class="media-tab${mediaActiveTab === 'edit' ? ' active' : ''}" onclick="mediaShowTab('edit')">Edit Tags</button>
+        </div>
+        <span class="${reviewedClass}" id="mpanel-reviewed-badge">${reviewedLabel}</span>
+        <button class="media-reviewed-btn" id="mpanel-mark-btn" onclick="mediaMarkReviewed(${!asset.reviewed})">${reviewBtnLabel}</button>
+      </div>
+
+      <div id="mpanel-view" style="${mediaActiveTab === 'view' ? '' : 'display:none'}">
+        <div class="media-preview">${previewHtml}</div>
+        <div class="media-info">
+          <div class="media-info-name">${escHtml(asset.filename)}</div>
+          <div class="media-info-meta">${asset.captured_date || '—'} · ${mediaSizeStr(asset.size_bytes)} · ${asset.file_type}</div>
+          <div class="media-info-path">${escHtml(asset.local_path)}</div>
+        </div>
+        <div id="mpanel-view-body"></div>
+      </div>
+
+      <div id="mpanel-edit" style="${mediaActiveTab === 'edit' ? '' : 'display:none'}">
+        <div class="media-save-bar">
+          <button class="media-save-btn" onclick="mediaSave()">Save Tags</button>
+          <button class="media-clear-btn" onclick="mediaClearTags()">Clear All</button>
+          <span class="media-save-status" id="media-save-status"></span>
+        </div>
+        <div id="mpanel-edit-body"></div>
+      </div>
+    </div>
+  `;
+
+  mediaRenderViewTab();
+  mediaRenderEditTab();
+}
+
+function mediaRenderViewTab() {
+  if (!mediaCurrentState) return;
+  const { asset, taggedSpecies, taggedBiomes, taggedSystems, taggedChronicle } = mediaCurrentState;
+
+  const speciesNames = admSpeciesList
+    .filter(s => taggedSpecies.has(s.id))
+    .map(s => escHtml(s.common_name || s.scientific_name || ''));
+  const biomeNames = admBiomesList
+    .filter(b => taggedBiomes.has(b.id))
+    .map(b => escHtml(b.public_name || b.name || ''));
+  const systemNames = MEDIA_SYSTEMS
+    .filter(s => taggedSystems.has(s.id))
+    .map(s => escHtml(s.name));
+  const chronicle = (admChroniclesList || []).find(c => c.id === taggedChronicle);
+
+  const chipsRow = (label, items) => `
+    <div class="media-view-section">
+      <div class="media-view-label">${label}</div>
+      <div class="media-view-chips">
+        ${items.length
+          ? items.map(n => `<span class="media-view-chip">${n}</span>`).join('')
+          : '<span class="media-view-empty">None tagged</span>'}
+      </div>
+    </div>`;
+
+  const body = document.getElementById('mpanel-view-body');
+  if (!body) return;
+
+  body.innerHTML = `
+    ${chipsRow('Species', speciesNames)}
+    ${chipsRow('Biomes', biomeNames)}
+    ${chipsRow('Systems', systemNames)}
+    <div class="media-view-section">
+      <div class="media-view-label">Chronicle</div>
+      <div class="media-view-chips">
+        ${chronicle
+          ? `<span class="media-view-chip chronicle">${escHtml(chronicle.event_date)} — ${escHtml(chronicle.title || '')}</span>`
+          : '<span class="media-view-empty">None linked</span>'}
+      </div>
+    </div>
+    <div class="media-view-section">
+      <div class="media-view-label">Tags</div>
+      <div class="media-view-chips">
+        ${mediaPendingTags.length
+          ? mediaPendingTags.map(t =>
+              `<span class="media-view-chip tag">${t.category ? `<span style="opacity:0.5;font-size:10px">${escHtml(t.category)}:</span> ` : ''}${escHtml(t.name)}</span>`
+            ).join('')
+          : '<span class="media-view-empty">None added</span>'}
+      </div>
+    </div>
+    ${asset.description ? `<div class="media-view-section">
+      <div class="media-view-label">Description</div>
+      <div class="media-view-text">${escHtml(asset.description)}</div>
+    </div>` : ''}
+    ${asset.notes ? `<div class="media-view-section">
+      <div class="media-view-label">Notes</div>
+      <div class="media-view-text notes">${escHtml(asset.notes)}</div>
+    </div>` : ''}
+    <div style="padding-top:8px">
+      <button class="media-edit-btn" onclick="mediaShowTab('edit')">Edit Tags →</button>
+    </div>
+  `;
+}
+
+function mediaRenderEditTab() {
+  if (!mediaCurrentState) return;
+  const { asset, taggedSpecies, taggedBiomes, taggedSystems, taggedChronicle } = mediaCurrentState;
+
+  const speciesHtml = admSpeciesList.map(s =>
+    `<label class="media-sp-label" data-name="${escHtml((s.common_name || s.scientific_name || '').toLowerCase())}">
+      <input type="checkbox" name="sp" value="${s.id}" ${taggedSpecies.has(s.id) ? 'checked' : ''}>
+      ${escHtml(s.common_name || s.scientific_name || '')}
+    </label>`
+  ).join('');
+
+  const biomeHtml = admBiomesList.map(b =>
+    `<label><input type="checkbox" name="bm" value="${b.id}" ${taggedBiomes.has(b.id) ? 'checked' : ''}> ${escHtml(b.public_name || b.name)}</label>`
+  ).join('');
+
+  const systemHtml = MEDIA_SYSTEMS.map(s =>
+    `<label><input type="checkbox" name="sys" value="${s.id}" ${taggedSystems.has(s.id) ? 'checked' : ''}> ${escHtml(s.name)}</label>`
+  ).join('');
+
+  const chronicleOptions = (admChroniclesList || [])
+    .slice().sort((a, b) => (b.event_date || '').localeCompare(a.event_date || ''))
+    .map(c => `<option value="${c.id}" ${c.id === taggedChronicle ? 'selected' : ''}>${escHtml(c.event_date)} — ${escHtml(c.title)}</option>`)
+    .join('');
+
+  const body = document.getElementById('mpanel-edit-body');
+  if (!body) return;
+
+  body.innerHTML = `
+    <div class="media-field-group">
+      <label>Captured Date</label>
+      <div class="media-field-hint">When this was captured — used to group files by timeline.</div>
+      <input type="date" id="mpanel-date" value="${asset.captured_date || ''}">
+    </div>
+
+    <div class="media-field-group">
+      <label>Species</label>
+      <div class="media-field-hint">Which species appear in or are relevant to this clip. Multiple allowed.</div>
+      <input class="media-sp-search" id="mpanel-sp-search" placeholder="Filter species…" oninput="mediaPanelFilterSpecies()" autocomplete="off">
+      <div class="media-checklist" id="mpanel-species">${speciesHtml}</div>
+    </div>
+
+    <div class="media-field-group">
+      <label>Biomes</label>
+      <div class="media-field-hint">The biome environment visible or relevant — e.g. Tidal Marsh, Brine Pool, Open Ocean.</div>
+      <div class="media-inline-checks" id="mpanel-biomes">${biomeHtml}</div>
+    </div>
+
+    <div class="media-field-group">
+      <label>Systems</label>
+      <div class="media-field-hint">Physical infrastructure shown — lighting rigs, wave generators, climate systems, enclosure hardware, etc.</div>
+      <div class="media-inline-checks" id="mpanel-systems">${systemHtml}</div>
+    </div>
+
+    <div class="media-field-group">
+      <label>Chronicle</label>
+      <div class="media-field-hint">Link to an existing chronicle entry — useful when this clip documents a specific milestone or event.</div>
+      <select id="mpanel-chronicle">
+        <option value="">None</option>
+        ${chronicleOptions}
+      </select>
+    </div>
+
+    <div class="media-field-group">
+      <label>Free-form Tags</label>
+      <div class="media-field-hint">Custom search keywords. Category is optional — e.g. tag: <em>spawning</em>, category: <em>behavior</em>. Or just: <em>macro</em>, <em>wide-shot</em>, <em>night-cycle</em>.</div>
+      <div class="media-tag-chips" id="mpanel-tag-chips"></div>
+      <div class="media-tag-input-row">
+        <input id="mpanel-tag-name" placeholder="tag name" onkeydown="mediaTagKeydown(event)">
+        <input id="mpanel-tag-cat" placeholder="category (opt)" style="max-width:130px" onkeydown="mediaTagKeydown(event)">
+        <button class="media-tag-add-btn" onclick="mediaAddPendingTag()">Add</button>
+      </div>
+    </div>
+
+    <div class="media-field-group">
+      <label>Description</label>
+      <div class="media-field-hint">What's happening in this clip — key moments, subject focus, environmental context. Main field for search and future chronicle writing.</div>
+      <textarea id="mpanel-description" rows="3" placeholder="e.g. Brine shrimp swarming near surface during afternoon light cycle. Tight cluster visible center frame.">${escHtml(asset.description || '')}</textarea>
+    </div>
+
+    <div class="media-field-group">
+      <label>Notes</label>
+      <div class="media-field-hint">Internal production notes — camera angles, lighting conditions, re-shoot ideas, clip quality flags.</div>
+      <textarea id="mpanel-notes" rows="2" placeholder="e.g. Slightly overexposed. Retake with ISO 400. Good motion reference.">${escHtml(asset.notes || '')}</textarea>
+    </div>
+  `;
+
+  mediaRenderTagChips();
+}
+
+function mediaShowTab(tab) {
+  mediaActiveTab = tab;
+  document.querySelectorAll('.media-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.textContent.trim().toLowerCase().startsWith(tab));
+  });
+  const viewEl = document.getElementById('mpanel-view');
+  const editEl = document.getElementById('mpanel-edit');
+  if (viewEl) viewEl.style.display = tab === 'view' ? '' : 'none';
+  if (editEl) editEl.style.display = tab === 'edit' ? '' : 'none';
+}
+
+async function mediaMarkReviewed(reviewed) {
+  if (!mediaCurrentState) return;
+  const id = mediaCurrentState.asset.id;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/media_assets?id=eq.${id}`, {
+    method: 'PATCH', headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ reviewed })
+  });
+  if (!r.ok) return;
+  mediaCurrentState.asset.reviewed = reviewed;
+
+  const badge = document.getElementById('mpanel-reviewed-badge');
+  const btn   = document.getElementById('mpanel-mark-btn');
+  if (badge) {
+    badge.textContent = reviewed ? '✓ Reviewed' : 'Unreviewed';
+    badge.className   = reviewed ? 'media-reviewed-badge reviewed' : 'media-reviewed-badge';
+  }
+  if (btn) {
+    btn.textContent = reviewed ? 'Mark Unreviewed' : 'Mark as Reviewed';
+    btn.onclick      = () => mediaMarkReviewed(!reviewed);
+  }
+
+  const row = document.querySelector(`.media-row[data-id="${id}"]`);
+  if (row) {
+    const existing = row.querySelector('.media-row-reviewed, .media-row-partial');
+    if (existing) existing.remove();
+    if (reviewed) {
+      const span = document.createElement('span');
+      span.className = 'media-row-reviewed'; span.textContent = '✓';
+      row.appendChild(span);
+    } else if (mediaCurrentState.taggedSpecies.size > 0) {
+      const span = document.createElement('span');
+      span.className = 'media-row-partial'; span.textContent = '◑';
+      row.appendChild(span);
+    }
+  }
+}
+
+async function mediaReindex() {
+  if (!window.electronAPI) {
+    alert('Re-index is only available in the desktop app.');
+    return;
+  }
+  const folder = prompt(
+    'Enter the folder path to index:',
+    'M:\\miniBIOTA\\miniBIOTA_Files\\8. Raw Footage\\Photos & Videos'
+  );
+  if (!folder) return;
+
+  const btn = document.getElementById('media-reindex-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Indexing…'; }
+
+  window.electronAPI.onReindexProgress(({ done, total }) => {
+    if (btn) btn.textContent = `Indexing… ${done}/${total}`;
+  });
+
+  try {
+    const result = await window.electronAPI.reindexMedia(folder);
+    if (result.success) {
+      admStatus(`Re-index complete: ${result.total} files scanned, ${result.newFiles} added.`, 'ok');
+      admLoadMedia();
+    } else {
+      admStatus('Re-index failed: ' + result.error, 'err');
+    }
+  } finally {
+    window.electronAPI.removeReindexProgress();
+    if (btn) { btn.disabled = false; btn.textContent = 'Re-index folder'; }
+  }
+}
+
+function mediaPanelFilterSpecies() {
+  const q = (document.getElementById('mpanel-sp-search').value || '').toLowerCase().trim();
+  document.querySelectorAll('#mpanel-species .media-sp-label').forEach(label => {
+    label.style.display = (!q || (label.dataset.name || '').includes(q)) ? '' : 'none';
+  });
+}
+
+function mediaTagKeydown(e) {
+  if (e.key === 'Enter') { e.preventDefault(); mediaAddPendingTag(); }
+}
+
+function mediaAddPendingTag() {
+  const nameEl = document.getElementById('mpanel-tag-name');
+  const catEl  = document.getElementById('mpanel-tag-cat');
+  const name   = (nameEl.value || '').trim().toLowerCase();
+  if (!name) return;
+  if (mediaPendingTags.some(t => t.name === name)) { nameEl.value = ''; return; }
+  mediaPendingTags.push({ id: null, name, category: (catEl.value || '').trim() || null });
+  nameEl.value = '';
+  catEl.value  = '';
+  nameEl.focus();
+  mediaRenderTagChips();
+}
+
+function mediaRemovePendingTag(idx) {
+  mediaPendingTags.splice(idx, 1);
+  mediaRenderTagChips();
+}
+
+function mediaRenderTagChips() {
+  const el = document.getElementById('mpanel-tag-chips');
+  if (!el) return;
+  el.innerHTML = mediaPendingTags.map((t, i) =>
+    `<span class="media-tag-chip">
+      ${t.category ? `<span style="color:#3a5060;font-size:10px">${escHtml(t.category)}:</span> ` : ''}${escHtml(t.name)}
+      <button onclick="mediaRemovePendingTag(${i})">×</button>
+    </span>`
+  ).join('');
+}
+
+async function mediaUpsertTags(tags) {
+  if (!tags.length) return [];
+  const ids     = tags.filter(t => t.id).map(t => t.id);
+  const newTags = tags.filter(t => !t.id);
+  if (!newTags.length) return ids;
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/media_tags`, {
+    method: 'POST',
+    headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(newTags.map(t => ({ name: t.name, category: t.category || null })))
+  });
+  const inserted = await res.json();
+  if (Array.isArray(inserted)) inserted.forEach(t => ids.push(t.id));
+  return ids;
+}
+
+async function mediaDeleteInsert(table, mediaId, rows) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?media_id=eq.${mediaId}`, { method: 'DELETE', headers: HEADERS });
+  if (rows.length) {
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST', headers: HEADERS, body: JSON.stringify(rows)
+    });
+  }
+}
+
+async function mediaSave() {
+  if (!mediaSelectedId) return;
+  const id       = mediaSelectedId;
+  const statusEl = document.getElementById('media-save-status');
+  if (statusEl) statusEl.textContent = 'Saving…';
+
+  const capturedDate = document.getElementById('mpanel-date')?.value || null;
+  const description  = document.getElementById('mpanel-description')?.value.trim() || null;
+  const notes        = document.getElementById('mpanel-notes')?.value.trim() || null;
+  const speciesIds   = [...document.querySelectorAll('#mpanel-species input[type=checkbox]:checked')].map(e => parseInt(e.value));
+  const biomeIds     = [...document.querySelectorAll('#mpanel-biomes input[type=checkbox]:checked')].map(e => parseInt(e.value));
+  const systemIds    = [...document.querySelectorAll('#mpanel-systems input[type=checkbox]:checked')].map(e => parseInt(e.value));
+  const chronicleVal = document.getElementById('mpanel-chronicle')?.value;
+  const chronicleId  = chronicleVal ? parseInt(chronicleVal) : null;
+
+  try {
+    const tagIds = await mediaUpsertTags(mediaPendingTags);
+
+    await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/media_assets?id=eq.${id}`, {
+        method: 'PATCH', headers: { ...HEADERS, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ captured_date: capturedDate || null, description, notes })
+      }),
+      mediaDeleteInsert('media_species',   id, speciesIds.map(s => ({ media_id: id, species_id: s }))),
+      mediaDeleteInsert('media_biomes',    id, biomeIds.map(b => ({ media_id: id, biome_id: b }))),
+      mediaDeleteInsert('media_systems',   id, systemIds.map(s => ({ media_id: id, system_id: s }))),
+      mediaDeleteInsert('media_chronicles',id, chronicleId ? [{ media_id: id, chronicle_id: chronicleId }] : []),
+      mediaDeleteInsert('media_tag_links', id, tagIds.map(t => ({ media_id: id, tag_id: t })))
+    ]);
+
+    if (mediaCurrentState) {
+      mediaCurrentState.asset.captured_date = capturedDate;
+      mediaCurrentState.asset.description   = description;
+      mediaCurrentState.asset.notes         = notes;
+      mediaCurrentState.taggedSpecies        = new Set(speciesIds);
+      mediaCurrentState.taggedBiomes         = new Set(biomeIds);
+      mediaCurrentState.taggedSystems        = new Set(systemIds);
+      mediaCurrentState.taggedChronicle      = chronicleId;
+    }
+    mediaRenderViewTab();
+
+    if (statusEl) {
+      statusEl.textContent = 'Saved ✓';
+      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2500);
+    }
+    admLoadMedia();
+
+  } catch(e) {
+    console.error(e);
+    if (statusEl) statusEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+function mediaClearTags() {
+  if (!confirm('Clear all tags for this file?')) return;
+  document.querySelectorAll('#mpanel-species input[type=checkbox]').forEach(el => el.checked = false);
+  document.querySelectorAll('#mpanel-biomes input[type=checkbox]').forEach(el => el.checked = false);
+  document.querySelectorAll('#mpanel-systems input[type=checkbox]').forEach(el => el.checked = false);
+  const ch = document.getElementById('mpanel-chronicle');
+  if (ch) ch.value = '';
+  mediaPendingTags = [];
+  mediaRenderTagChips();
 }
