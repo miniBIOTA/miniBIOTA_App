@@ -5,12 +5,16 @@ let calSubView       = "week";    // "week" | "month"
 let calEntries       = [];
 let calLoops         = [];
 let calLoopLinks     = [];
+let calThreads       = [];
 let calWeekOffset    = 0;
 let calMonthOffset   = 0;
 let calLoopEco       = "all";     // "all" | "youtube" | "shorts"
+let calThreadStatus  = "all";     // "all" | "story_ready" | "developing"
 let calModalOpen     = false;
 let calLpcFilter     = "all";     // loop picker filter in modal
 const calLpcSelected = new Set(); // loop IDs selected in modal picker
+let calTpFilter      = "all";     // thread picker filter in modal
+const calTpSelected  = new Set(); // thread IDs selected in modal picker
 
 const FORMAT_META = {
   short:    { label: "Shorts",    cls: "fmt-short",    color: "#20b090" },
@@ -29,16 +33,19 @@ const STATUS_META = {
 async function loadCalendar() {
   document.getElementById("cal-page-subtitle").textContent = "Loading...";
   try {
-    const [entries, loops, links] = await Promise.all([
+    const [entries, loops, links, threads] = await Promise.all([
       api("content_calendar?select=*&order=scheduled_date.asc,scheduled_time.asc"),
       api("open_loops?select=*&status=in.(open,advanced)&order=opened_at.desc"),
       api("observation_loop_links?select=*"),
+      api("story_threads?select=*&became_pipeline_id=is.null&order=created_at.desc"),
     ]);
-    calEntries  = entries;
-    calLoops    = loops;
+    calEntries   = entries;
+    calLoops     = loops;
     calLoopLinks = links;
+    calThreads   = threads;
 
     renderCalPage();
+    renderThreadPanel();
     const now = new Date();
     document.getElementById("cal-page-subtitle").textContent =
       "Last updated " + now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -76,11 +83,13 @@ function setCalPageView(v) {
 function updateCalStats() {
   const planned  = calEntries.filter(e => e.status === "planned").length;
   const inprod   = calEntries.filter(e => e.status === "in_production").length;
+  const threads  = calThreads.length;
   const ytLoops  = calLoops.filter(l => l.source_format !== "short").length;
   const shLoops  = calLoops.filter(l => l.source_format === "short").length;
 
   document.getElementById("cal-stat-planned").textContent   = planned;
   document.getElementById("cal-stat-inprod").textContent    = inprod;
+  document.getElementById("cal-stat-threads").textContent   = threads;
   document.getElementById("cal-stat-yt-loops").textContent  = ytLoops;
   document.getElementById("cal-stat-sh-loops").textContent  = shLoops;
 }
@@ -112,12 +121,21 @@ function calEntryCard(entry) {
   const date   = entry.scheduled_date
     ? new Date(entry.scheduled_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : "";
-  const time   = entry.scheduled_time
-    ? entry.scheduled_time.slice(0,5)
-    : "";
+  const time         = entry.scheduled_time ? entry.scheduled_time.slice(0,5) : "";
   const loopsClosing = (entry.loop_ids_closing || []).length;
-  const loopsOpening = (entry.loop_ids_opening || []).length;
   const threads      = (entry.thread_ids || []).length;
+
+  // checklist progress
+  const clItems = (CAL_CHECKLIST_MAP[entry.format] || (() => []))();
+  const clState = entry.checklist_state || {};
+  const clDone  = clItems.filter(i => clState[i.id]).length;
+  const clTotal = clItems.length;
+  const clPct   = clTotal ? Math.round(clDone / clTotal * 100) : 0;
+
+  // vault path — show just the filename
+  const vaultFile = entry.vault_path
+    ? entry.vault_path.split(/[\\/]/).pop()
+    : "";
 
   return `
     <div class="cal-card" onclick="openEditModal(${entry.id})">
@@ -129,7 +147,8 @@ function calEntryCard(entry) {
         ${date ? `<span class="cal-card-date">${date}${time ? " · " + time : ""}</span>` : ""}
         ${threads ? `<span class="cal-card-tag">🧵 ${threads} thread${threads > 1 ? "s" : ""}</span>` : ""}
         ${loopsClosing ? `<span class="cal-card-tag cal-closing">↓ ${loopsClosing} loop${loopsClosing > 1 ? "s" : ""}</span>` : ""}
-        ${loopsOpening ? `<span class="cal-card-tag cal-opening">↑ ${loopsOpening} loop${loopsOpening > 1 ? "s" : ""}</span>` : ""}
+        ${vaultFile ? `<span class="cal-card-tag cal-vault" title="${escHtml(entry.vault_path)}">📄 ${escHtml(vaultFile)}</span>` : ""}
+        ${clTotal ? `<span class="cal-card-tag cal-cl-prog${clDone === clTotal ? " done" : ""}">${clDone}/${clTotal}</span>` : ""}
       </div>
       ${entry.notes ? `<div class="cal-card-notes">${escHtml(entry.notes)}</div>` : ""}
     </div>`;
@@ -172,13 +191,19 @@ function renderCalWeek() {
       .sort((a,b) => (a.scheduled_time || "23:59") < (b.scheduled_time || "23:59") ? -1 : 1);
 
     const cards = dayEntries.map(e => {
-      const fmt  = FORMAT_META[e.format] || FORMAT_META.short;
-      const time = e.scheduled_time ? e.scheduled_time.slice(0,5) : "";
+      const fmt    = FORMAT_META[e.format] || FORMAT_META.short;
+      const time   = e.scheduled_time ? e.scheduled_time.slice(0,5) : "";
       const status = STATUS_META[e.status] || STATUS_META.planned;
+      const clItems = (CAL_CHECKLIST_MAP[e.format] || (() => []))();
+      const clDone  = clItems.filter(i => (e.checklist_state || {})[i.id]).length;
+      const clTotal = clItems.length;
       return `<div class="cal-week-card ${fmt.cls}" onclick="openEditModal(${e.id})">
         <div class="cal-week-card-time">${time || "—"}</div>
         <div class="cal-week-card-title">${escHtml(entry_abbrev(e.title))}</div>
-        <span class="cal-week-card-status ${status.cls}">${status.label}</span>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:2px">
+          <span class="cal-week-card-status ${status.cls}">${status.label}</span>
+          ${clTotal ? `<span class="cal-card-tag cal-cl-prog${clDone === clTotal ? " done" : ""}" style="font-size:9px;padding:1px 4px">${clDone}/${clTotal}</span>` : ""}
+        </div>
       </div>`;
     }).join("");
 
@@ -326,6 +351,111 @@ function renderLoopPanel() {
   }).join("");
 }
 
+// ── Story Threads Panel ──
+
+function setThreadFilter(f) {
+  calThreadStatus = f;
+  document.querySelectorAll("[data-tstatus]").forEach(b => {
+    b.classList.toggle("active", b.dataset.tstatus === f);
+  });
+  renderThreadPanel();
+}
+
+function renderThreadPanel() {
+  const container = document.getElementById("cal-threads-container");
+  if (!container) return;
+
+  const filtered = calThreadStatus === "all"
+    ? calThreads
+    : calThreads.filter(t => t.status === calThreadStatus);
+
+  const countEl = document.getElementById("cal-thread-count");
+  if (countEl) countEl.textContent = filtered.length;
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="cal-empty">No story threads${calThreadStatus !== "all" ? " matching filter" : ""}.</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(thread => {
+    const statusColors = {
+      "story_ready": "#20b090",
+      "developing":  "#8878cc",
+    };
+    const color = statusColors[thread.status] || "#888";
+    const label = thread.status === "story_ready" ? "Story Ready"
+                : thread.status === "developing"  ? "Developing"
+                : thread.status || "";
+
+    const speciesName = thread.species_id ? (speciesMap[thread.species_id] || "") : "";
+    const biomeName   = thread.biome_id   ? (biomeMap[thread.biome_id]     || "") : "";
+
+    return `
+      <div class="cal-thread-card">
+        <div class="cal-thread-header">
+          <span class="cal-thread-status" style="background:${color}22;color:${color};border:1px solid ${color}44">${label}</span>
+        </div>
+        <div class="cal-thread-text">${escHtml(thread.title || thread.thread_text || "")}</div>
+        <div class="cal-thread-meta">
+          ${speciesName ? `<span class="tag tag-species">${escHtml(speciesName)}</span>` : ""}
+          ${biomeName   ? `<span class="tag tag-biome">${escHtml(biomeName)}</span>`   : ""}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+// ── Modal Production Checklist ──
+
+const CAL_CHECKLIST_MAP = {
+  short:    () => CHECKLIST_ITEMS.short,
+  mid:      () => CHECKLIST_ITEMS.mf,
+  longform: () => CHECKLIST_ITEMS.lf,
+};
+
+function renderModalChecklist(format, state) {
+  const items = (CAL_CHECKLIST_MAP[format] || (() => []))();
+  const section = document.getElementById("cal-cl-section");
+  if (!section) return;
+
+  if (!items.length) { section.style.display = "none"; return; }
+  section.style.display = "";
+
+  const done  = items.filter(i => !!(state && state[i.id])).length;
+  const prog  = document.getElementById("cal-cl-progress");
+  if (prog) {
+    prog.textContent = done + " / " + items.length;
+    prog.classList.toggle("done", done === items.length);
+  }
+
+  document.getElementById("cal-cl-items").innerHTML = items.map(item => {
+    const checked = !!(state && state[item.id]);
+    return `<div class="cal-cl-item" onclick="toggleCalCl('${item.id}')">
+      <div class="cal-cl-cb${checked ? " checked" : ""}"></div>
+      <div class="cal-cl-label${checked ? " done" : ""}">${escHtml(item.label)}</div>
+    </div>`;
+  }).join("");
+}
+
+async function toggleCalCl(itemId) {
+  const idVal = document.getElementById("cal-entry-id").value;
+  if (!idVal) return;
+  const entryId = parseInt(idVal, 10);
+  const entry   = calEntries.find(e => e.id === entryId);
+  if (!entry) return;
+
+  const state     = Object.assign({}, entry.checklist_state || {});
+  state[itemId]   = !state[itemId];
+  entry.checklist_state = state;
+  renderModalChecklist(entry.format, state);
+
+  const res = await fetch(SUPABASE_URL + "/rest/v1/content_calendar?id=eq." + entryId, {
+    method: "PATCH",
+    headers: { ...HEADERS, "Prefer": "return=minimal" },
+    body: JSON.stringify({ checklist_state: state }),
+  });
+  if (!res.ok) console.error("checklist save failed:", await res.json());
+}
+
 // ── Loop Picker (modal) ──
 
 function setLpcFilter(f) {
@@ -376,24 +506,82 @@ function renderLpc() {
   if (badge) badge.textContent = calLpcSelected.size ? calLpcSelected.size + " selected" : "";
 }
 
+// ── Thread Picker (modal) ──
+
+function setTpFilter(f) {
+  calTpFilter = f;
+  document.querySelectorAll(".cal-tp-btn").forEach(b => b.classList.toggle("active", b.dataset.tfilter === f));
+  renderTp();
+}
+
+function toggleTp(id) {
+  if (calTpSelected.has(id)) calTpSelected.delete(id); else calTpSelected.add(id);
+  document.querySelectorAll(`.cal-tp-item[data-id="${id}"]`).forEach(el => {
+    el.classList.toggle("selected", calTpSelected.has(id));
+    const chk = el.querySelector(".cal-lpc-check");
+    if (chk) chk.textContent = calTpSelected.has(id) ? "✓" : "";
+  });
+  const badge = document.getElementById("cal-tp-count");
+  if (badge) badge.textContent = calTpSelected.size ? calTpSelected.size + " selected" : "";
+}
+
+function renderTp() {
+  let threads = calThreads;
+  if (calTpFilter !== "all") threads = threads.filter(t => t.status === calTpFilter);
+
+  const container = document.getElementById("cal-tp");
+  if (!container) return;
+
+  if (!threads.length) {
+    container.innerHTML = '<div style="padding:10px 12px;color:#3a5060;font-size:12px">No story threads match this filter.</div>';
+    return;
+  }
+
+  const STATUS_CLS = { story_ready: "tag-story-ready", in_production: "tag-in-production", developing: "tag-developing" };
+  const STATUS_LBL = { story_ready: "story ready", in_production: "in production", developing: "developing" };
+
+  container.innerHTML = threads.map(t => {
+    const sel         = calTpSelected.has(t.id);
+    const speciesName = t.species_id ? (speciesMap[t.species_id] || "") : "";
+    const biomeName   = t.biome_id   ? (biomeMap[t.biome_id]     || "") : "";
+    const sCls        = STATUS_CLS[t.status] || "tag-developing";
+    const sLbl        = STATUS_LBL[t.status] || (t.status || "developing");
+    return `<div class="cal-tp-item${sel ? " selected" : ""}" data-id="${t.id}" onclick="toggleTp(${t.id})">
+      <span class="tag ${sCls}" style="font-size:10px;padding:1px 6px;flex-shrink:0">${sLbl}</span>
+      <span class="cal-lpc-text">${escHtml(t.title || "(untitled)")}</span>
+      ${speciesName ? `<span class="tag tag-species" style="font-size:10px;padding:1px 5px;flex-shrink:0">${escHtml(speciesName)}</span>` : ""}
+      ${biomeName   ? `<span class="tag tag-biome"   style="font-size:10px;padding:1px 5px;flex-shrink:0">${escHtml(biomeName)}</span>`   : ""}
+      <span class="cal-lpc-check">${sel ? "✓" : ""}</span>
+    </div>`;
+  }).join("");
+
+  const badge = document.getElementById("cal-tp-count");
+  if (badge) badge.textContent = calTpSelected.size ? calTpSelected.size + " selected" : "";
+}
+
 // ── Add / Edit Modal ──
 
 function openAddModal(defaultFormat, defaultDate) {
+  const fmt = defaultFormat || "short";
   document.getElementById("cal-modal-title").textContent  = "Schedule a Story";
   document.getElementById("cal-entry-id").value           = "";
   document.getElementById("cal-entry-title").value        = "";
-  document.getElementById("cal-entry-format").value       = defaultFormat || "short";
+  document.getElementById("cal-entry-format").value       = fmt;
   document.getElementById("cal-entry-status").value       = "planned";
   document.getElementById("cal-entry-date").value         = defaultDate   || "";
   document.getElementById("cal-entry-time").value         = "";
   document.getElementById("cal-entry-notes").value        = "";
-  document.getElementById("cal-entry-threads").value      = "";
-  document.getElementById("cal-entry-loops-opening").value = "";
+  document.getElementById("cal-entry-vault-path").value   = "";
   document.getElementById("cal-delete-btn").style.display = "none";
   calLpcSelected.clear();
   calLpcFilter = "all";
   document.querySelectorAll(".cal-lpc-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+  calTpSelected.clear();
+  calTpFilter = "all";
+  document.querySelectorAll(".cal-tp-btn").forEach(b => b.classList.toggle("active", b.dataset.tfilter === "all"));
   renderLpc();
+  renderTp();
+  renderModalChecklist(fmt, {});
   showCalModal();
 }
 
@@ -408,15 +596,20 @@ function openEditModal(id) {
   document.getElementById("cal-entry-status").value       = entry.status   || "planned";
   document.getElementById("cal-entry-date").value         = entry.scheduled_date || "";
   document.getElementById("cal-entry-time").value         = entry.scheduled_time ? entry.scheduled_time.slice(0,5) : "";
-  document.getElementById("cal-entry-notes").value        = entry.notes    || "";
-  document.getElementById("cal-entry-threads").value      = (entry.thread_ids || []).join(", ");
-  document.getElementById("cal-entry-loops-opening").value = (entry.loop_ids_opening || []).join(", ");
+  document.getElementById("cal-entry-notes").value        = entry.notes      || "";
+  document.getElementById("cal-entry-vault-path").value   = entry.vault_path || "";
   document.getElementById("cal-delete-btn").style.display = "";
   calLpcSelected.clear();
   if (entry.loop_ids_closing) entry.loop_ids_closing.forEach(lid => calLpcSelected.add(lid));
   calLpcFilter = "all";
   document.querySelectorAll(".cal-lpc-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
+  calTpSelected.clear();
+  if (entry.thread_ids) entry.thread_ids.forEach(tid => calTpSelected.add(tid));
+  calTpFilter = "all";
+  document.querySelectorAll(".cal-tp-btn").forEach(b => b.classList.toggle("active", b.dataset.tfilter === "all"));
   renderLpc();
+  renderTp();
+  renderModalChecklist(entry.format, entry.checklist_state || {});
   showCalModal();
 }
 
@@ -441,6 +634,8 @@ async function submitCalEntry(e) {
   const id    = document.getElementById("cal-entry-id").value;
   const isNew = !id;
 
+  const vaultPath = document.getElementById("cal-entry-vault-path").value.trim();
+
   const payload = {
     title:            document.getElementById("cal-entry-title").value.trim(),
     format:           document.getElementById("cal-entry-format").value,
@@ -448,11 +643,12 @@ async function submitCalEntry(e) {
     scheduled_date:   document.getElementById("cal-entry-date").value  || null,
     scheduled_time:   document.getElementById("cal-entry-time").value  || null,
     notes:            document.getElementById("cal-entry-notes").value.trim() || null,
-    thread_ids:       parseIds(document.getElementById("cal-entry-threads").value),
+    thread_ids:       calTpSelected.size ? [...calTpSelected] : null,
     loop_ids_closing: calLpcSelected.size ? [...calLpcSelected] : null,
-    loop_ids_opening: parseIds(document.getElementById("cal-entry-loops-opening").value),
     updated_at:       new Date().toISOString(),
   };
+  // only include optional columns if they have values (avoids 400 if migration not yet run)
+  if (vaultPath) payload.vault_path = vaultPath;
 
   if (!payload.title) { alert("Title is required."); return; }
 
@@ -467,21 +663,29 @@ async function submitCalEntry(e) {
         headers: { ...HEADERS, "Prefer": "return=representation" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Supabase error " + res.status);
+      }
       const created = await res.json();
       if (Array.isArray(created)) calEntries.push(...created);
     } else {
-      await fetch(SUPABASE_URL + "/rest/v1/content_calendar?id=eq." + id, {
+      const res = await fetch(SUPABASE_URL + "/rest/v1/content_calendar?id=eq." + id, {
         method: "PATCH",
         headers: { ...HEADERS, "Prefer": "return=minimal" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Supabase error " + res.status);
+      }
       const idx = calEntries.findIndex(e => e.id === parseInt(id, 10));
       if (idx >= 0) calEntries[idx] = { ...calEntries[idx], ...payload, id: parseInt(id, 10) };
     }
     closeCalModal();
     renderCalPage();
   } catch(err) {
-    alert("Error saving entry. Check console.");
+    alert("Error saving entry: " + err.message);
     console.error(err);
   } finally {
     submitBtn.disabled = false;

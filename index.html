@@ -337,6 +337,10 @@
       <div class="cal-stat-label">In Production</div>
     </div>
     <div class="cal-stat">
+      <div class="cal-stat-num" id="cal-stat-threads">—</div>
+      <div class="cal-stat-label">Story Threads</div>
+    </div>
+    <div class="cal-stat">
       <div class="cal-stat-num" id="cal-stat-yt-loops">—</div>
       <div class="cal-stat-label">YouTube Loops</div>
     </div>
@@ -381,7 +385,7 @@
         <button class="cal-week-nav-btn" onclick="calNextWeek()">→</button>
         <button class="cal-week-nav-btn today" onclick="calThisWeek()">Today</button>
       </div>
-      <div id="cal-week-grid"></div>
+      <div id="cal-week-grid" class="cal-week-grid"></div>
     </div>
 
     <div id="cal-month-subview" class="hidden">
@@ -405,6 +409,18 @@
       <button class="cal-loop-eco-btn"        data-eco="shorts"  onclick="setLoopEco('shorts')">Shorts</button>
     </div>
     <div class="cal-loops-grid" id="cal-loops-container"><div class="loading">Loading...</div></div>
+  </div>
+
+  <!-- Thread Panel -->
+  <div class="cal-loop-panel">
+    <div class="cal-loop-panel-header">
+      <span class="cal-loop-panel-title">Story Threads</span>
+      <span id="cal-thread-count">—</span>
+      <button class="cal-loop-eco-btn active" data-tstatus="all"         onclick="setThreadFilter('all')">All</button>
+      <button class="cal-loop-eco-btn"        data-tstatus="story_ready" onclick="setThreadFilter('story_ready')">Story Ready</button>
+      <button class="cal-loop-eco-btn"        data-tstatus="developing"  onclick="setThreadFilter('developing')">Developing</button>
+    </div>
+    <div class="cal-loops-grid" id="cal-threads-container"><div class="loading">Loading...</div></div>
   </div>
 
 </div><!-- /page-calendar -->
@@ -455,9 +471,28 @@
         <textarea id="cal-entry-notes" placeholder="What's the hook? What observation does this come from?"></textarea>
       </div>
       <div class="cal-form-group">
-        <label>Thread IDs (comma-separated)</label>
-        <input id="cal-entry-threads" placeholder="e.g. 1, 5, 12">
-        <span class="cal-form-help">Story thread IDs this piece draws from</span>
+        <label>Vault Path <span class="cal-form-help" style="display:inline;margin-left:6px">longform only — e.g. 3. Content Pipeline\EP01-shrimp-zoea.md</span></label>
+        <input id="cal-entry-vault-path" placeholder="relative path from vault root">
+      </div>
+
+      <!-- Production Checklist -->
+      <div class="cal-cl-section" id="cal-cl-section">
+        <div class="cal-cl-section-header">
+          <span class="cal-cl-section-title">Production Checklist</span>
+          <span class="cal-cl-progress" id="cal-cl-progress"></span>
+        </div>
+        <div id="cal-cl-items"></div>
+      </div>
+
+      <div class="cal-form-group">
+        <label>Story Threads <span class="cal-lpc-badge" id="cal-tp-count"></span></label>
+        <div class="cal-lpc-filter">
+          <button type="button" class="cal-tp-btn active" data-tfilter="all"          onclick="setTpFilter('all')">All</button>
+          <button type="button" class="cal-tp-btn"        data-tfilter="story_ready"  onclick="setTpFilter('story_ready')">Story Ready</button>
+          <button type="button" class="cal-tp-btn"        data-tfilter="in_production" onclick="setTpFilter('in_production')">In Production</button>
+          <button type="button" class="cal-tp-btn"        data-tfilter="developing"   onclick="setTpFilter('developing')">Developing</button>
+        </div>
+        <div class="cal-lpc" id="cal-tp"><div style="padding:10px 12px;color:#3a5060;font-size:12px">Loading threads...</div></div>
       </div>
       <div class="cal-form-group">
         <label>Loops This Closes <span class="cal-lpc-badge" id="cal-lpc-count"></span></label>
@@ -467,11 +502,6 @@
           <button type="button" class="cal-lpc-btn"        data-filter="shorts"  onclick="setLpcFilter('shorts')">Shorts</button>
         </div>
         <div class="cal-lpc" id="cal-lpc"><div style="padding:10px 12px;color:#3a5060;font-size:12px">Loading loops...</div></div>
-      </div>
-      <div class="cal-form-group">
-        <label>Loops This Opens</label>
-        <input id="cal-entry-loops-opening" placeholder="Loop IDs of new loops to seed (comma-separated)">
-        <span class="cal-form-help">Pre-create loops in the tracker first, then enter their IDs here</span>
       </div>
       <div class="cal-modal-actions">
         <button type="button" class="cal-delete-btn" id="cal-delete-btn" onclick="deleteCalEntry()" style="display:none">Delete</button>

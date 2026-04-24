@@ -1122,17 +1122,19 @@ function mediaRenderPanel() {
           <button class="media-tab${mediaActiveTab === 'view' ? ' active' : ''}" onclick="mediaShowTab('view')">View</button>
           <button class="media-tab${mediaActiveTab === 'edit' ? ' active' : ''}" onclick="mediaShowTab('edit')">Edit Tags</button>
         </div>
-        <span class="${reviewedClass}" id="mpanel-reviewed-badge">${reviewedLabel}</span>
-        <button class="media-reviewed-btn" id="mpanel-mark-btn" onclick="mediaMarkReviewed(${!asset.reviewed})">${reviewBtnLabel}</button>
+        <button class="media-reviewed-btn ${asset.reviewed ? 'is-reviewed' : ''}" id="mpanel-mark-btn" onclick="mediaMarkReviewed(${!asset.reviewed})">
+          ${asset.reviewed ? '✓ Reviewed — click to undo' : 'Mark as Reviewed'}
+        </button>
+      </div>
+
+      <div class="media-preview">${previewHtml}</div>
+      <div class="media-info">
+        <div class="media-info-name">${escHtml(asset.filename)}</div>
+        <div class="media-info-meta">${asset.captured_date || '—'} · ${mediaSizeStr(asset.size_bytes)} · ${asset.file_type}</div>
+        <div class="media-info-path">${escHtml(asset.local_path)}</div>
       </div>
 
       <div id="mpanel-view" style="${mediaActiveTab === 'view' ? '' : 'display:none'}">
-        <div class="media-preview">${previewHtml}</div>
-        <div class="media-info">
-          <div class="media-info-name">${escHtml(asset.filename)}</div>
-          <div class="media-info-meta">${asset.captured_date || '—'} · ${mediaSizeStr(asset.size_bytes)} · ${asset.file_type}</div>
-          <div class="media-info-path">${escHtml(asset.local_path)}</div>
-        </div>
         <div id="mpanel-view-body"></div>
       </div>
 
@@ -1325,15 +1327,11 @@ async function mediaMarkReviewed(reviewed) {
   if (!r.ok) return;
   mediaCurrentState.asset.reviewed = reviewed;
 
-  const badge = document.getElementById('mpanel-reviewed-badge');
-  const btn   = document.getElementById('mpanel-mark-btn');
-  if (badge) {
-    badge.textContent = reviewed ? '✓ Reviewed' : 'Unreviewed';
-    badge.className   = reviewed ? 'media-reviewed-badge reviewed' : 'media-reviewed-badge';
-  }
+  const btn = document.getElementById('mpanel-mark-btn');
   if (btn) {
-    btn.textContent = reviewed ? 'Mark Unreviewed' : 'Mark as Reviewed';
-    btn.onclick      = () => mediaMarkReviewed(!reviewed);
+    btn.textContent = reviewed ? '✓ Reviewed — click to undo' : 'Mark as Reviewed';
+    btn.className   = reviewed ? 'media-reviewed-btn is-reviewed' : 'media-reviewed-btn';
+    btn.onclick     = () => mediaMarkReviewed(!reviewed);
   }
 
   const row = document.querySelector(`.media-row[data-id="${id}"]`);
