@@ -1,0 +1,39 @@
+{
+  "source": {
+    "kind": "desktop_app_manual",
+    "label": "Desktop app manual snapshot",
+    "detail": "Sample desktop-app export until the live coordinator feed is wired into the app."
+  },
+  "coordinator": {
+    "state": "healthy",
+    "label": "Coordinator reachable",
+    "detail": "Local MQTT/logging coordinator heartbeat is present.",
+    "last_seen": "2026-04-23T16:45:00Z"
+  },
+  "upstream": {
+    "state": "offline",
+    "label": "Building internet unavailable",
+    "detail": "The local network is healthy, but upstream internet is currently down.",
+    "last_seen": "2026-04-23T16:45:00Z"
+  },
+  "setpoint_channel": {
+    "state": "healthy",
+    "label": "Target temperatures published",
+    "detail": "The desktop app is exposing the latest target temperature as read-only website data.",
+    "last_seen": "2026-04-23T16:45:00Z",
+    "target_temperature_c": 24.5
+  },
+  "nodes": [
+    {
+      "id": "climate-node",
+      "name": "Climate Node",
+      "role": "Temperature / Humidity",
+      "state": "stale",
+      "detail": "Latest heartbeat is older than the expected publish interval.",
+      "last_seen": "2026-04-23T16:42:00Z",
+      "temperature_c": 24.3,
+      "humidity_pct": 68.2,
+      "target_temperature_c": 24.5
+    }
+  ]
+}

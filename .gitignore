@@ -1,3 +1,4 @@
 node_modules/
 dist/
 out/
+tools/telemetry-snapshot.output.json

@@ -5,7 +5,9 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win --x64"
+    "build": "electron-builder --win --x64",
+    "telemetry:export": "node tools/export-telemetry-snapshot.js",
+    "telemetry:export:sample": "node tools/export-telemetry-snapshot.js --input tools/telemetry-snapshot.sample.json --output tools/telemetry-snapshot.output.json"
   },
   "build": {
     "appId": "com.minibiota.app",
