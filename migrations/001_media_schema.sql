@@ -82,3 +82,15 @@ CREATE INDEX idx_media_biomes_biome          ON media_biomes(biome_id);
 CREATE INDEX idx_media_systems_system        ON media_systems(system_id);
 CREATE INDEX idx_media_chronicles_chronicle  ON media_chronicles(chronicle_id);
 CREATE INDEX idx_media_tag_links_tag         ON media_tag_links(tag_id);
+
+-- Row Level Security
+ALTER TABLE media_assets         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_species        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_biomes         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_systems        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_chronicles     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_tags           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_tag_links      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_projects       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media_project_assets ENABLE ROW LEVEL SECURITY;
+-- No policies needed — service role key (used by Electron app) bypasses RLS.

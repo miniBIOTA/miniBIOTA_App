@@ -860,7 +860,7 @@ function renderPurchases(purchases) {
 
 // ── Page switching ──
 function showPage(page) {
-  ["story", "checklist", "tasks", "financials", "sales", "roadmap", "admin", "calendar"].forEach(p => {
+  ["story", "checklist", "tasks", "financials", "sales", "roadmap", "admin", "calendar", "monitoring"].forEach(p => {
     document.getElementById("page-" + p).classList.toggle("hidden", page !== p);
     document.getElementById("tab-" + p).classList.toggle("active", page === p);
   });
@@ -872,6 +872,7 @@ function showPage(page) {
   if (page === "roadmap")    { loadRoadmap(); }
   if (page === "calendar")   { loadCalendar(); }
   if (page === "admin" && !admLoaded) { admLoadAll(); admLoaded = true; }
+  if (page === "monitoring") { initMonitoring(); }
 }
 
 // ── Checklist definitions ──

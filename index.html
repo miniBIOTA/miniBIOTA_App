@@ -19,6 +19,7 @@
     <button class="page-tab" id="tab-roadmap" onclick="showPage('roadmap')">Roadmap</button>
     <button class="page-tab" id="tab-calendar" onclick="showPage('calendar')">Content Calendar</button>
     <button class="page-tab" id="tab-admin" onclick="showPage('admin')">Site Admin</button>
+    <button class="page-tab" id="tab-monitoring" onclick="showPage('monitoring')">Monitoring</button>
   </div>
   <button class="refresh-btn" id="refresh-btn" onclick="loadAll()" style="margin-left:16px">Refresh</button>
 </div>
@@ -1092,9 +1093,19 @@
 
 </div><!-- /page-admin -->
 
+<!-- ── Monitoring Page ── -->
+<div id="page-monitoring" class="hidden">
+  <div id="mon-banner" class="mon-banner mon-banner-connecting">
+    <span id="mon-banner-text">Waiting for MQTT connection...</span>
+  </div>
+  <div class="mon-biome-tabs" id="mon-biome-tabs"></div>
+  <div id="mon-panels"></div>
+</div><!-- /page-monitoring -->
+
 <script src="js/config.js"></script>
 <script src="js/core.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/calendar.js"></script>
+<script src="js/monitoring.js"></script>
 </body>
 </html>

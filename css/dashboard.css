@@ -2013,3 +2013,94 @@ select#cal-entry-format option[value="longform"] { color: #c8a040; }
   font-style: italic;
 }
 .media-field-hint em { font-style: normal; color: #4a7080; }
+
+/* ── Monitoring Tab ── */
+.mon-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  margin-bottom: 24px;
+  border: 1px solid;
+}
+.mon-banner-connecting { background: #1e1a08; border-color: #5a4a18; color: #c8a030; }
+.mon-banner-live        { background: #091808; border-color: #1a4828; color: #40c868; }
+.mon-banner-offline     { background: #180808; border-color: #4a1818; color: #c83838; }
+
+.mon-biome-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.mon-biome-tab {
+  background: none;
+  border: 1px solid #1e3535;
+  color: #4a8878;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.mon-biome-tab:hover  { border-color: #2e5555; color: #6aaa98; }
+.mon-biome-tab.active { background: #0a2020; border-color: #40c8a8; color: #40c8a8; font-weight: 500; }
+
+.mon-panel-header    { margin-bottom: 24px; }
+.mon-panel-title-row { display: flex; align-items: center; gap: 12px; }
+.mon-panel-title     { font-size: 20px; font-weight: 600; color: #c8e8e0; }
+.mon-last-seen       { font-size: 11px; color: #4a6a6a; }
+
+.mon-chip {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: 1px solid;
+}
+.mon-chip.healthy { background: #091808; border-color: #1e8840; color: #40d070; }
+.mon-chip.stale   { background: #1e1808; border-color: #886020; color: #d09030; }
+.mon-chip.offline { background: #180808; border-color: #882020; color: #d04040; }
+
+.mon-sensor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.mon-sensor-card {
+  background: #111820;
+  border: 1px solid #1a2535;
+  border-radius: 10px;
+  padding: 20px 16px;
+  text-align: center;
+}
+.mon-sensor-card.featured {
+  background: #091a20;
+  border-color: #1a4045;
+}
+.mon-sensor-card.accent {
+  background: #130e1e;
+  border-color: #2e1e50;
+}
+.mon-sensor-label {
+  font-size: 11px;
+  color: #4a6878;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 10px;
+}
+.mon-sensor-value {
+  font-size: 36px;
+  font-weight: 600;
+  color: #c8d8e0;
+  line-height: 1;
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.mon-sensor-card.featured .mon-sensor-value { font-size: 42px; color: #50d8c0; }
+.mon-sensor-card.accent   .mon-sensor-value { color: #9870d0; }
+.mon-sensor-unit { font-size: 12px; color: #3a5560; }
