@@ -43,6 +43,7 @@ Electron desktop app for internal miniBIOTA operations. Connects directly to Sup
 
 ## Planned Next Phases
 
+- **Monitoring tab (9th tab):** Live biome telemetry and setpoint control. Connects directly to MQTT broker at `192.168.8.228:1883` (when on mB2.4 WiFi); falls back to Supabase `telemetry_snapshot` singleton. Shows 6 biome cards with bio temp, atmo temp, humidity, liquid temp, pump %, current setpoint. Setpoint control publishes directly to MQTT (`miniBIOTA/biome/{N}/setpoint`) and queues in Supabase `setpoint_commands`. Full spec in `M:\miniBIOTA\miniBIOTA_Brain\6. Engineering & Hardware\telemetry_pipeline_plan.md`.
 - **Phase 3:** PWA at `minibiota.com/log` — mobile field logging (species, biome, photo, GPS → Supabase `observations`)
   - Needs: `log.html`, `manifest.json`, `service-worker.js`
 - **Phase 4:** Capacitor-wrapped `.apk` for sideloaded Android install (no Play Store)

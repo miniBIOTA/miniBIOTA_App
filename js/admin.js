@@ -86,11 +86,11 @@ function admFmt(iso) {
   return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function admStatus(msg, type = 'ok') {
+function admStatus(msg, type = 'ok', duration = 4000) {
   const el = document.getElementById('admin-status');
   el.textContent = msg;
   el.className = 'admin-status ' + type;
-  setTimeout(() => { el.className = 'admin-status'; }, 4000);
+  setTimeout(() => { el.className = 'admin-status'; }, duration);
 }
 
 function admVal(id) {
@@ -965,12 +965,13 @@ async function mediaApiFetch(path) {
   return { data, total };
 }
 
-async function admLoadMedia() {
+async function admLoadMedia(sortOrder) {
   document.getElementById('media-list').innerHTML = '<div class="loading" style="padding:16px">Loading…</div>';
 
+  const order = sortOrder || 'captured_date.desc,filename.asc';
   const offset = mediaPage * MEDIA_PAGE_SIZE;
   let params = `media_assets?select=id,filename,local_path,file_type,captured_date,size_bytes,reviewed,media_species(media_id)` +
-               `&order=captured_date.desc,filename.asc&limit=${MEDIA_PAGE_SIZE}&offset=${offset}`;
+               `&order=${order}&limit=${MEDIA_PAGE_SIZE}&offset=${offset}`;
 
   if (mediaTypeFilter)     params += `&file_type=eq.${mediaTypeFilter}`;
   if (mediaYearFilter)     params += `&captured_date=gte.${mediaYearFilter}-01-01&captured_date=lte.${mediaYearFilter}-12-31`;
@@ -1355,13 +1356,12 @@ async function mediaReindex() {
     alert('Re-index is only available in the desktop app.');
     return;
   }
-  const folder = prompt(
-    'Enter the folder path to index:',
-    'M:\\miniBIOTA\\miniBIOTA_Files\\8. Raw Footage\\Photos & Videos'
-  );
+  const folder = await window.electronAPI.selectFolder();
   if (!folder) return;
 
   const btn = document.getElementById('media-reindex-btn');
+  const resultSpan = document.getElementById('media-reindex-result');
+  if (resultSpan) resultSpan.textContent = '';
   if (btn) { btn.disabled = true; btn.textContent = 'Indexing…'; }
 
   window.electronAPI.onReindexProgress(({ done, total }) => {
@@ -1371,10 +1371,29 @@ async function mediaReindex() {
   try {
     const result = await window.electronAPI.reindexMedia(folder);
     if (result.success) {
-      admStatus(`Re-index complete: ${result.total} files scanned, ${result.newFiles} added.`, 'ok');
-      admLoadMedia();
+      // Clear all filters so newly indexed files aren't hidden by year/type
+      mediaYearFilter     = '';
+      mediaTypeFilter     = '';
+      mediaShowUnreviewed = false;
+      mediaSearchQuery    = '';
+      mediaPage           = 0;
+      document.getElementById('media-year').value = '';
+      document.getElementById('media-search').value = '';
+      ['all', 'photo', 'video'].forEach(t => {
+        const b = document.getElementById(`media-tbtn-${t}`);
+        if (b) b.classList.toggle('active', t === 'all');
+      });
+      const unrevBtn = document.getElementById('media-tbtn-unreviewed');
+      if (unrevBtn) unrevBtn.classList.remove('active');
+
+      // Sort by indexed_at so newly added files appear at the top
+      admLoadMedia('indexed_at.desc,filename.asc');
+      const msg = `✓ ${result.total} scanned, ${result.newFiles} added`;
+      admStatus(`Re-index complete — ${result.total} files scanned, ${result.newFiles} added. Showing newest indexed first.`, 'ok', 10000);
+      if (resultSpan) { resultSpan.style.color = '#6fbb6f'; resultSpan.textContent = msg; }
     } else {
       admStatus('Re-index failed: ' + result.error, 'err');
+      if (resultSpan) { resultSpan.style.color = '#e07070'; resultSpan.textContent = '✗ ' + result.error; }
     }
   } finally {
     window.electronAPI.removeReindexProgress();

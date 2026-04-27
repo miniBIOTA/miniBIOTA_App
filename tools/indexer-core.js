@@ -48,20 +48,27 @@ function supabaseInsert(records) {
     const body = JSON.stringify(records);
     const options = {
       hostname: 'vmosexwnmnddabmmnidy.supabase.co',
-      path: '/rest/v1/media_assets',
+      path: '/rest/v1/media_assets?on_conflict=local_path',
       method: 'POST',
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': 'Bearer ' + SUPABASE_KEY,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
-        'Prefer': 'resolution=ignore-duplicates,return=minimal'
+        'Prefer': 'resolution=ignore-duplicates,return=representation'
       }
     };
     const req = https.request(options, res => {
       let data = '';
       res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          try { resolve({ inserted: JSON.parse(data).length }); }
+          catch (_) { resolve({ inserted: 0 }); }
+        } else {
+          reject(new Error(`Supabase insert error ${res.statusCode}: ${data}`));
+        }
+      });
     });
     req.on('error', reject);
     req.write(body);
@@ -95,14 +102,16 @@ async function indexMedia(folder, onProgress) {
 
   const BATCH = 100;
   let sent = 0;
+  let newFiles = 0;
   for (let i = 0; i < records.length; i += BATCH) {
     const chunk = records.slice(i, i + BATCH);
-    await supabaseInsert(chunk);
+    const { inserted } = await supabaseInsert(chunk);
     sent += chunk.length;
+    newFiles += inserted;
     if (onProgress) onProgress({ done: Math.min(sent, total), total });
   }
 
-  return { total, newFiles: sent };
+  return { total, newFiles };
 }
 
 module.exports = indexMedia;

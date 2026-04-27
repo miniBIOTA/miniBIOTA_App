@@ -865,6 +865,7 @@ function showPage(page) {
     document.getElementById("tab-" + p).classList.toggle("active", page === p);
   });
   document.getElementById("refresh-btn").classList.toggle("hidden", page !== "story");
+  if (page === "story")      { loadAll(); }
   if (page === "checklist")  { loadChecklistState(); if (clView === "cal") renderCalendar(); else renderChecklist(); }
   if (page === "tasks")      { loadTasks(); }
   if (page === "financials") { loadFinancials(); }

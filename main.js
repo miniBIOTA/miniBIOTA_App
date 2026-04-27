@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 
 let win = null;
@@ -22,6 +22,15 @@ function createWindow() {
   win.loadFile('index.html');
   win.setMenuBarVisibility(false);
 }
+
+ipcMain.handle('select-folder', async () => {
+  const result = await dialog.showOpenDialog(win, {
+    title: 'Select media folder to index',
+    defaultPath: 'M:\\miniBIOTA\\miniBIOTA_Files\\8. Raw Footage\\Photos & Videos',
+    properties: ['openDirectory']
+  });
+  return result.canceled ? null : result.filePaths[0];
+});
 
 ipcMain.handle('reindex-media', async (event, folder) => {
   try {
