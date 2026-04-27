@@ -85,15 +85,17 @@ async function supabaseInsert(records) {
 }
 
 async function fetchFolderRecords(folder) {
-  // Fetch all DB records whose local_path starts with this folder
-  const prefix = encodeURIComponent((folder.endsWith('\\') ? folder : folder + '\\'));
+  // Fetch all DB records and filter client-side — avoids LIKE/backslash escape issues
+  const prefix = (folder.endsWith('\\') ? folder : folder + '\\').toLowerCase();
   const results = [];
   let offset = 0;
   while (true) {
     const rows = await supabaseReq('GET',
-      `/rest/v1/media_assets?select=id,local_path&local_path=ilike.${prefix}%25&limit=1000&offset=${offset}`
+      `/rest/v1/media_assets?select=id,local_path&limit=1000&offset=${offset}`
     );
-    results.push(...rows);
+    for (const r of rows) {
+      if (r.local_path && r.local_path.toLowerCase().startsWith(prefix)) results.push(r);
+    }
     if (rows.length < 1000) break;
     offset += 1000;
   }
@@ -121,8 +123,9 @@ async function indexMedia(folder, onProgress) {
   const total = files.length;
 
   // Remove DB records for files that no longer exist on disk
+  const filesOnDiskLower = new Set([...filesOnDisk].map(p => p.toLowerCase()));
   const dbRecords = await fetchFolderRecords(rootDir);
-  const orphanIds = dbRecords.filter(r => !filesOnDisk.has(r.local_path)).map(r => r.id);
+  const orphanIds = dbRecords.filter(r => !filesOnDiskLower.has(r.local_path.toLowerCase())).map(r => r.id);
   if (orphanIds.length) await deleteByIds(orphanIds);
   const removed = orphanIds.length;
 
