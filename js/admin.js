@@ -1388,8 +1388,9 @@ async function mediaReindex() {
 
       // Sort by indexed_at so newly added files appear at the top
       admLoadMedia('indexed_at.desc,filename.asc');
-      const msg = `✓ ${result.total} scanned, ${result.newFiles} added`;
-      admStatus(`Re-index complete — ${result.total} files scanned, ${result.newFiles} added. Showing newest indexed first.`, 'ok', 10000);
+      const removedPart = result.removed ? `, ${result.removed} removed` : '';
+      const msg = `✓ ${result.total} scanned, ${result.newFiles} added${removedPart}`;
+      admStatus(`Re-index complete — ${msg}. Showing newest indexed first.`, 'ok', 10000);
       if (resultSpan) { resultSpan.style.color = '#6fbb6f'; resultSpan.textContent = msg; }
     } else {
       admStatus('Re-index failed: ' + result.error, 'err');

@@ -1,12 +1,10 @@
 // tools/indexer-core.js
-// Core indexer logic used by both the CLI script and the Electron IPC handler.
-// Exports: indexMedia(folder, onProgress) → Promise<{ total, newFiles }>
+// Exports: indexMedia(folder, onProgress) → Promise<{ total, newFiles, removed }>
 
 const fs    = require('fs');
 const path  = require('path');
 const https = require('https');
 
-const SUPABASE_URL = 'https://vmosexwnmnddabmmnidy.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtb3NleHdubW5kZGFibW1uaWR5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjA2MzA0MSwiZXhwIjoyMDg3NjM5MDQxfQ.3Yr1DEOvPNHRJuJOV7_ADDhsf0nYSFRWHnou-D2ajKI';
 
 const PHOTO_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.heic', '.tif', '.tiff', '.raw', '.cr2', '.nef', '.arw', '.dng']);
@@ -43,19 +41,19 @@ function walkDir(dir, results = []) {
   return results;
 }
 
-function supabaseInsert(records) {
+function supabaseReq(method, urlPath, body, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
-    const body = JSON.stringify(records);
+    const bodyStr = body ? JSON.stringify(body) : null;
     const options = {
       hostname: 'vmosexwnmnddabmmnidy.supabase.co',
-      path: '/rest/v1/media_assets?on_conflict=local_path',
-      method: 'POST',
+      path: urlPath,
+      method,
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': 'Bearer ' + SUPABASE_KEY,
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-        'Prefer': 'resolution=ignore-duplicates,return=representation'
+        ...extraHeaders,
+        ...(bodyStr ? { 'Content-Length': Buffer.byteLength(bodyStr) } : {})
       }
     };
     const req = https.request(options, res => {
@@ -63,17 +61,55 @@ function supabaseInsert(records) {
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         if (res.statusCode >= 200 && res.statusCode < 300) {
-          try { resolve({ inserted: JSON.parse(data).length }); }
-          catch (_) { resolve({ inserted: 0 }); }
+          try { resolve(data ? JSON.parse(data) : []); }
+          catch (_) { resolve([]); }
         } else {
-          reject(new Error(`Supabase insert error ${res.statusCode}: ${data}`));
+          reject(new Error(`Supabase error ${res.statusCode}: ${data}`));
         }
       });
     });
     req.on('error', reject);
-    req.write(body);
+    if (bodyStr) req.write(bodyStr);
     req.end();
   });
+}
+
+async function supabaseInsert(records) {
+  const result = await supabaseReq(
+    'POST',
+    '/rest/v1/media_assets?on_conflict=local_path',
+    records,
+    { 'Prefer': 'resolution=ignore-duplicates,return=representation' }
+  );
+  return Array.isArray(result) ? result.length : 0;
+}
+
+async function fetchFolderRecords(folder) {
+  // Fetch all DB records whose local_path starts with this folder
+  const prefix = encodeURIComponent((folder.endsWith('\\') ? folder : folder + '\\'));
+  const results = [];
+  let offset = 0;
+  while (true) {
+    const rows = await supabaseReq('GET',
+      `/rest/v1/media_assets?select=id,local_path&local_path=ilike.${prefix}%25&limit=1000&offset=${offset}`
+    );
+    results.push(...rows);
+    if (rows.length < 1000) break;
+    offset += 1000;
+  }
+  return results;
+}
+
+async function deleteByIds(ids) {
+  const BATCH = 100;
+  for (let i = 0; i < ids.length; i += BATCH) {
+    const chunk = ids.slice(i, i + BATCH);
+    await supabaseReq('DELETE',
+      `/rest/v1/media_assets?id=in.(${chunk.join(',')})`,
+      null,
+      { 'Prefer': 'return=minimal' }
+    );
+  }
 }
 
 async function indexMedia(folder, onProgress) {
@@ -81,8 +117,16 @@ async function indexMedia(folder, onProgress) {
   if (!fs.existsSync(rootDir)) throw new Error(`Folder not found: ${rootDir}`);
 
   const files = walkDir(rootDir);
+  const filesOnDisk = new Set(files);
   const total = files.length;
-  if (!total) return { total: 0, newFiles: 0 };
+
+  // Remove DB records for files that no longer exist on disk
+  const dbRecords = await fetchFolderRecords(rootDir);
+  const orphanIds = dbRecords.filter(r => !filesOnDisk.has(r.local_path)).map(r => r.id);
+  if (orphanIds.length) await deleteByIds(orphanIds);
+  const removed = orphanIds.length;
+
+  if (!total) return { total: 0, newFiles: 0, removed };
 
   const records = files.map(filePath => {
     let size = 0;
@@ -105,13 +149,12 @@ async function indexMedia(folder, onProgress) {
   let newFiles = 0;
   for (let i = 0; i < records.length; i += BATCH) {
     const chunk = records.slice(i, i + BATCH);
-    const { inserted } = await supabaseInsert(chunk);
+    newFiles += await supabaseInsert(chunk);
     sent += chunk.length;
-    newFiles += inserted;
     if (onProgress) onProgress({ done: Math.min(sent, total), total });
   }
 
-  return { total, newFiles };
+  return { total, newFiles, removed };
 }
 
 module.exports = indexMedia;
