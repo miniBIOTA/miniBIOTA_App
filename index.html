@@ -15,7 +15,7 @@
     <button class="page-tab" id="tab-checklist" onclick="showPage('checklist')">Weekly Checklist</button>
     <button class="page-tab" id="tab-tasks" onclick="showPage('tasks')">Tasks</button>
     <button class="page-tab" id="tab-financials" onclick="showPage('financials')">Financials</button>
-    <button class="page-tab" id="tab-sales" onclick="showPage('sales')">Sales Pipeline</button>
+    <button class="page-tab" id="tab-sales" onclick="showPage('sales')">CRM <span class="crm-overdue-badge hidden" id="crm-overdue-badge"></span></button>
     <button class="page-tab" id="tab-roadmap" onclick="showPage('roadmap')">Roadmap</button>
     <button class="page-tab" id="tab-calendar" onclick="showPage('calendar')">Content Calendar</button>
     <button class="page-tab" id="tab-admin" onclick="showPage('admin')">Site Admin</button>
@@ -226,48 +226,77 @@
 
 </div><!-- /page-financials -->
 
-<!-- ── Sales Pipeline Page ── -->
+<!-- ── CRM Page ── -->
 <div id="page-sales" class="hidden">
 
-  <div class="sales-header">
-    <span class="week-label" style="color:#4a6a3a">Sponsorship pipeline — <strong id="sales-month" style="color:#7aaa50">—</strong></span>
-    <button class="tasks-clear-btn" onclick="loadSales()">Refresh</button>
-  </div>
+  <!-- Overdue banner (hidden when no overdue items) -->
+  <div class="crm-overdue-banner hidden" id="crm-overdue-banner"></div>
 
-  <!-- Revenue goal bar -->
-  <div class="goal-bar-wrap">
-    <div class="goal-bar-labels">
-      <span class="goal-bar-current" id="goal-current">—</span>
-      <span class="goal-bar-target">Goal: $2,000 / mo</span>
+  <!-- View toggle -->
+  <div class="crm-header">
+    <div class="crm-view-toggle">
+      <button class="crm-view-btn active" id="crm-view-contacts" onclick="setCrmView('contacts')">Contacts</button>
+      <button class="crm-view-btn" id="crm-view-pipeline" onclick="setCrmView('pipeline')">Pipeline</button>
+      <button class="crm-view-btn" id="crm-view-activities" onclick="setCrmView('activities')">Activities</button>
     </div>
-    <div class="goal-bar-track">
-      <div class="goal-bar-fill" id="goal-bar" style="width:0%"></div>
-    </div>
-    <div class="goal-bar-sublabel" id="goal-sublabel">Loading revenue data...</div>
+    <button class="tasks-clear-btn" onclick="loadCrm()">Refresh</button>
   </div>
 
   <!-- Stats row -->
-  <div class="sales-stat-row" id="sales-stats"></div>
+  <div class="crm-stats-row" id="crm-stats"></div>
 
-  <!-- Partner pipeline -->
-  <div class="sales-section">
-    <div class="sales-section-header">
-      <span class="sales-section-title">Partner Pipeline</span>
-      <span class="count-badge" id="sales-pipeline-count">—</span>
+  <!-- CONTACTS VIEW -->
+  <div id="crm-contacts-view">
+    <!-- Filter row: relationship type chips -->
+    <div class="filter-row" id="crm-type-filter"></div>
+    <!-- Search -->
+    <div class="crm-search-row">
+      <input type="text" id="crm-search" placeholder="Search contacts..." oninput="renderCrmContacts()" />
+      <button class="cal-save-btn" onclick="openCrmContactModal()">+ Add Contact</button>
     </div>
-    <div id="sales-pipeline-container"><div class="loading">Loading...</div></div>
+    <!-- Master-detail -->
+    <div class="crm-master-detail">
+      <div class="crm-contact-list" id="crm-contact-list">
+        <div class="loading">Loading...</div>
+      </div>
+      <div class="crm-contact-detail" id="crm-contact-detail">
+        <div class="crm-detail-empty">Select a contact to view details</div>
+      </div>
+    </div>
   </div>
 
-  <!-- Sales tasks -->
-  <div class="sales-section">
-    <div class="sales-section-header">
-      <span class="sales-section-title">This Week — Sales Actions</span>
-      <span class="count-badge" id="sales-tasks-count">—</span>
+  <!-- PIPELINE VIEW -->
+  <div id="crm-pipeline-view" class="hidden">
+    <div class="crm-pipeline-header">
+      <button class="cal-save-btn" onclick="openCrmOppModal()">+ Add Opportunity</button>
     </div>
-    <div id="sales-tasks-container"><div class="loading">Loading...</div></div>
+    <div class="crm-pipeline-board" id="crm-pipeline-board">
+      <div class="loading">Loading...</div>
+    </div>
+    <!-- Goal bar (preserved from old Sales Pipeline) -->
+    <div class="sales-goal-bar-wrap" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:12px;color:#4a6a3a">Monthly Revenue Goal</span>
+        <span class="sales-goal-current" id="goal-current">—</span>
+      </div>
+      <div class="sales-goal-bar-bg"><div class="sales-goal-bar-fill" id="goal-bar" style="width:0%"></div></div>
+      <div class="sales-goal-sublabel" id="goal-sublabel"></div>
+    </div>
   </div>
 
-</div><!-- /page-sales -->
+  <!-- ACTIVITIES VIEW -->
+  <div id="crm-activities-view" class="hidden">
+    <div class="crm-pipeline-header">
+      <button class="cal-save-btn" onclick="openCrmActivityModal()">+ Add Activity</button>
+    </div>
+    <!-- Filter: All | Overdue | Due Today | Upcoming | Done -->
+    <div class="filter-row" id="crm-activity-filter"></div>
+    <div id="crm-activities-list">
+      <div class="loading">Loading...</div>
+    </div>
+  </div>
+
+</div><!-- /page-sales (CRM) -->
 
 <!-- ── Roadmap Page ── -->
 <div id="page-roadmap" class="hidden">
@@ -1104,10 +1133,180 @@
   <div id="mon-panels"></div>
 </div><!-- /page-monitoring -->
 
+<!-- ── CRM Contact Modal ── -->
+<div class="cal-modal hidden" id="crm-contact-modal">
+  <div class="cal-modal-inner" style="max-width:520px">
+    <div class="cal-modal-header">
+      <span class="cal-modal-title" id="crm-contact-modal-title">Add Contact</span>
+      <button class="cal-modal-close" onclick="closeCrmContactModal()">✕</button>
+    </div>
+    <input type="hidden" id="crm-contact-id" />
+    <div class="cal-form-row">
+      <label class="cal-form-label">Name *</label>
+      <input type="text" class="cal-form-input" id="crm-contact-name" placeholder="Full name" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Organization</label>
+      <input type="text" class="cal-form-input" id="crm-contact-org" placeholder="Company or brand" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Role / Title</label>
+      <input type="text" class="cal-form-input" id="crm-contact-role" placeholder="e.g. Marketing Manager" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Relationship Type</label>
+      <select class="cal-form-select" id="crm-contact-type">
+        <option value="sponsor">Sponsor / Brand Partner</option>
+        <option value="press">Press / Media</option>
+        <option value="speaking">Speaking / Event</option>
+        <option value="affiliate">Affiliate</option>
+        <option value="creator">Creator Collab</option>
+        <option value="grant">Grant / Funding</option>
+        <option value="distributor">Distributor</option>
+        <option value="general">General Contact</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Email</label>
+      <input type="email" class="cal-form-input" id="crm-contact-email" placeholder="email@example.com" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Phone</label>
+      <input type="text" class="cal-form-input" id="crm-contact-phone" placeholder="+1 (555) 000-0000" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Website</label>
+      <input type="text" class="cal-form-input" id="crm-contact-website" placeholder="https://" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Notes</label>
+      <textarea class="cal-form-input" id="crm-contact-notes" rows="3" placeholder="Background, context, how you met..."></textarea>
+    </div>
+    <div class="cal-modal-footer">
+      <button class="cal-delete-btn hidden" id="crm-contact-delete-btn" onclick="deleteCrmContact()">Delete</button>
+      <button class="cal-cancel-btn" onclick="closeCrmContactModal()">Cancel</button>
+      <button class="cal-save-btn" onclick="saveCrmContact()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CRM Opportunity Modal ── -->
+<div class="cal-modal hidden" id="crm-opp-modal">
+  <div class="cal-modal-inner" style="max-width:520px">
+    <div class="cal-modal-header">
+      <span class="cal-modal-title" id="crm-opp-modal-title">Add Opportunity</span>
+      <button class="cal-modal-close" onclick="closeCrmOppModal()">✕</button>
+    </div>
+    <input type="hidden" id="crm-opp-id" />
+    <div class="cal-form-row">
+      <label class="cal-form-label">Organization *</label>
+      <input type="text" class="cal-form-input" id="crm-opp-org" placeholder="Company or brand" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Opportunity Name</label>
+      <input type="text" class="cal-form-input" id="crm-opp-name" placeholder="e.g. Season sponsorship" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Contact</label>
+      <select class="cal-form-select" id="crm-opp-contact">
+        <option value="">— None —</option>
+      </select>
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Status</label>
+      <select class="cal-form-select" id="crm-opp-status">
+        <option value="not_contacted">Not Contacted</option>
+        <option value="outreach_sent">Outreach Sent</option>
+        <option value="in_conversation">In Conversation</option>
+        <option value="gifting_only">Gifting Only</option>
+        <option value="closed_won">Closed — Won</option>
+        <option value="closed_lost">Closed — Lost</option>
+      </select>
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Estimated Value ($/video)</label>
+      <input type="number" class="cal-form-input" id="crm-opp-value" placeholder="0.00" min="0" step="0.01" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Next Action</label>
+      <input type="text" class="cal-form-input" id="crm-opp-next-action" placeholder="e.g. Send media kit" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Next Action Date</label>
+      <input type="date" class="cal-form-input" id="crm-opp-next-date" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Notes</label>
+      <textarea class="cal-form-input" id="crm-opp-notes" rows="3" placeholder="Deal context, requirements, history..."></textarea>
+    </div>
+    <div class="cal-modal-footer">
+      <button class="cal-delete-btn hidden" id="crm-opp-delete-btn" onclick="deleteCrmOpp()">Delete</button>
+      <button class="cal-cancel-btn" onclick="closeCrmOppModal()">Cancel</button>
+      <button class="cal-save-btn" onclick="saveCrmOpp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CRM Activity Modal ── -->
+<div class="cal-modal hidden" id="crm-activity-modal">
+  <div class="cal-modal-inner" style="max-width:480px">
+    <div class="cal-modal-header">
+      <span class="cal-modal-title" id="crm-activity-modal-title">Add Activity</span>
+      <button class="cal-modal-close" onclick="closeCrmActivityModal()">✕</button>
+    </div>
+    <input type="hidden" id="crm-activity-id" />
+    <div class="cal-form-row">
+      <label class="cal-form-label">Title *</label>
+      <input type="text" class="cal-form-input" id="crm-activity-title" placeholder="e.g. Follow up on media kit" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Type</label>
+      <select class="cal-form-select" id="crm-activity-type">
+        <option value="follow_up">Follow Up</option>
+        <option value="email">Email</option>
+        <option value="call">Call</option>
+        <option value="meeting">Meeting</option>
+        <option value="proposal">Proposal Sent</option>
+        <option value="contract">Contract</option>
+        <option value="event">Event</option>
+        <option value="note">Note</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Contact</label>
+      <select class="cal-form-select" id="crm-activity-contact">
+        <option value="">— None —</option>
+      </select>
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Linked Opportunity</label>
+      <select class="cal-form-select" id="crm-activity-opp">
+        <option value="">— None —</option>
+      </select>
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Due Date</label>
+      <input type="date" class="cal-form-input" id="crm-activity-due" />
+    </div>
+    <div class="cal-form-row">
+      <label class="cal-form-label">Notes</label>
+      <textarea class="cal-form-input" id="crm-activity-notes" rows="3" placeholder="Details, context..."></textarea>
+    </div>
+    <div class="cal-modal-footer">
+      <button class="cal-delete-btn hidden" id="crm-activity-delete-btn" onclick="deleteCrmActivity()">Delete</button>
+      <button class="cal-cancel-btn" onclick="closeCrmActivityModal()">Cancel</button>
+      <button class="cal-save-btn" onclick="saveCrmActivity()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script src="js/config.js"></script>
 <script src="js/core.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/calendar.js"></script>
 <script src="js/monitoring.js"></script>
+<script src="js/crm.js"></script>
 </body>
 </html>
