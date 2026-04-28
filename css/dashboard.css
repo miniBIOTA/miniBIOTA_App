@@ -56,6 +56,20 @@ h1 {
 .biome-tab.active { background: #1a2530; border-color: #60aa88; color: #60aa88; }
 .biome-tab.all.active { background: #1a2030; border-color: #5a8aaa; color: #5a8aaa; }
 
+/* ── Year tabs (observations) ── */
+.year-tab {
+  background: none;
+  border: 1px solid #2a3545;
+  color: #5a6a7a;
+  border-radius: 20px;
+  padding: 4px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.year-tab:hover { border-color: #4a5565; color: #8a9aaa; }
+.year-tab.active { background: #1a2030; border-color: #7a88cc; color: #7a88cc; }
+
 /* ── System tabs ── */
 .system-tab {
   background: none;

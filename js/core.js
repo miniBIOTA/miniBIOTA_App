@@ -10,6 +10,7 @@ let activeBiomeId      = null;   // null = All
 let activeSystemId     = null;   // null = All
 let activeSpeciesId    = null;   // null = All
 let activeSectionFilter = null;  // null = All | "loops" | "threads" | "obs"
+let activeYearFilter   = null;   // null = All years
 let showResolved       = false;
 
 // Systems are fixed — not fetched from DB
@@ -31,13 +32,6 @@ const TODAY = (() => {
     String(d.getDate()).padStart(2, "0");
 })();
 
-const SIXTY_DAYS_AGO = (() => {
-  const d = new Date();
-  d.setDate(d.getDate() - 60);
-  return d.getFullYear() + "-" +
-    String(d.getMonth() + 1).padStart(2, "0") + "-" +
-    String(d.getDate()).padStart(2, "0");
-})();
 
 // ── Load ──
 async function loadAll() {
@@ -48,7 +42,7 @@ async function loadAll() {
       api("biomes?select=id,name"),
       api("open_loops?select=*&order=opened_at.desc"),
       api("story_threads?select=*&became_pipeline_id=is.null&order=created_at.desc"),
-      api("observations?select=*&observed_at=gte." + SIXTY_DAYS_AGO + "&order=observed_at.desc"),
+      api("observations?select=*&order=observed_at.desc"),
       api("observation_loop_links?select=*"),
       api("observation_thread_links?select=*")
     ]);
@@ -67,6 +61,7 @@ async function loadAll() {
     buildSystemTabs();
     buildSpeciesTabs();
     buildSectionTabs();
+    buildYearTabs();
     render();
 
     const now = new Date();
@@ -204,6 +199,31 @@ function setSpeciesFilter(speciesId) {
     btn.classList.toggle("active", btn.classList.contains("all") && activeSpeciesId === null);
   });
   document.querySelectorAll(".system-tab").forEach(btn => btn.classList.remove("active"));
+}
+
+// ── Year filter (observations) ──
+function buildYearTabs() {
+  const years = [...new Set(
+    allObs.map(o => (o.observed_at || "").slice(0, 4)).filter(Boolean)
+  )].sort((a, b) => b - a);
+
+  const container = document.getElementById("obs-year-tabs");
+  if (!years.length) { container.innerHTML = ""; return; }
+
+  container.innerHTML =
+    `<span class="filter-label">Year</span>` +
+    `<button class="year-tab ${activeYearFilter === null ? "active" : ""}" onclick="setYearFilter(null)">All</button>` +
+    years.map(y =>
+      `<button class="year-tab ${activeYearFilter === y ? "active" : ""}" onclick="setYearFilter('${y}')">${y}</button>`
+    ).join("");
+}
+
+function setYearFilter(year) {
+  activeYearFilter = year;
+  render();
+  document.querySelectorAll(".year-tab").forEach(btn => {
+    btn.classList.toggle("active", btn.textContent === (year || "All"));
+  });
 }
 
 function toggleResolved() {
@@ -446,6 +466,9 @@ function renderObs(openLoops) {
   let obs = allObs;
   if (activeBiomeId !== null) {
     obs = obs.filter(o => o.biome_id === activeBiomeId);
+  }
+  if (activeYearFilter !== null) {
+    obs = obs.filter(o => (o.observed_at || "").startsWith(activeYearFilter));
   }
 
   // separate today vs earlier (startsWith handles both date and timestamptz formats)
