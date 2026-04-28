@@ -11,6 +11,7 @@ let calMonthOffset   = 0;
 let calLoopEco       = "all";     // "all" | "youtube" | "shorts"
 let calThreadStatus  = "all";     // "all" | "story_ready" | "developing"
 let calModalOpen     = false;
+let calModalTab      = "details"; // "details" | "content" | "production"
 let calLpcFilter     = "all";     // loop picker filter in modal
 const calLpcSelected = new Set(); // loop IDs selected in modal picker
 let calTpFilter      = "all";     // thread picker filter in modal
@@ -97,14 +98,7 @@ function updateCalStats() {
 // ── Board View ──
 
 function renderCalBoard() {
-  const active = calEntries.filter(e => e.status !== "published");
-  // also show recently published (last 14 days)
-  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 14);
-  const recentPub = calEntries.filter(e =>
-    e.status === "published" && e.scheduled_date &&
-    new Date(e.scheduled_date) >= cutoff
-  );
-  const shown = [...active, ...recentPub];
+  const shown = calEntries.filter(e => e.status !== "published");
 
   ["short", "mid", "longform"].forEach(fmt => {
     const col = document.getElementById("cal-col-" + fmt);
@@ -571,8 +565,12 @@ function openAddModal(defaultFormat, defaultDate) {
   document.getElementById("cal-entry-date").value         = defaultDate   || "";
   document.getElementById("cal-entry-time").value         = "";
   document.getElementById("cal-entry-notes").value        = "";
-  document.getElementById("cal-entry-vault-path").value   = "";
-  document.getElementById("cal-delete-btn").style.display = "none";
+  document.getElementById("cal-entry-vault-path").value        = "";
+  document.getElementById("cal-entry-thumbnail-text").value    = "";
+  document.getElementById("cal-entry-publish-title").value     = "";
+  document.getElementById("cal-entry-video-description").value = "";
+  document.getElementById("cal-entry-script").value            = "";
+  document.getElementById("cal-delete-btn").style.display      = "none";
   calLpcSelected.clear();
   calLpcFilter = "all";
   document.querySelectorAll(".cal-lpc-btn").forEach(b => b.classList.toggle("active", b.dataset.filter === "all"));
@@ -582,6 +580,7 @@ function openAddModal(defaultFormat, defaultDate) {
   renderLpc();
   renderTp();
   renderModalChecklist(fmt, {});
+  setCalModalTab("details");
   showCalModal();
 }
 
@@ -596,9 +595,13 @@ function openEditModal(id) {
   document.getElementById("cal-entry-status").value       = entry.status   || "planned";
   document.getElementById("cal-entry-date").value         = entry.scheduled_date || "";
   document.getElementById("cal-entry-time").value         = entry.scheduled_time ? entry.scheduled_time.slice(0,5) : "";
-  document.getElementById("cal-entry-notes").value        = entry.notes      || "";
-  document.getElementById("cal-entry-vault-path").value   = entry.vault_path || "";
-  document.getElementById("cal-delete-btn").style.display = "";
+  document.getElementById("cal-entry-notes").value            = entry.notes             || "";
+  document.getElementById("cal-entry-vault-path").value       = entry.vault_path        || "";
+  document.getElementById("cal-entry-thumbnail-text").value   = entry.thumbnail_text    || "";
+  document.getElementById("cal-entry-publish-title").value    = entry.publish_title     || "";
+  document.getElementById("cal-entry-video-description").value = entry.video_description || "";
+  document.getElementById("cal-entry-script").value           = entry.script            || "";
+  document.getElementById("cal-delete-btn").style.display     = "";
   calLpcSelected.clear();
   if (entry.loop_ids_closing) entry.loop_ids_closing.forEach(lid => calLpcSelected.add(lid));
   calLpcFilter = "all";
@@ -610,7 +613,16 @@ function openEditModal(id) {
   renderLpc();
   renderTp();
   renderModalChecklist(entry.format, entry.checklist_state || {});
+  setCalModalTab("details");
   showCalModal();
+}
+
+function setCalModalTab(tab) {
+  calModalTab = tab;
+  ["details", "content", "production"].forEach(t => {
+    document.getElementById("cal-mtab-" + t).classList.toggle("active", t === tab);
+    document.getElementById("cal-mtab-pane-" + t).classList.toggle("hidden", t !== tab);
+  });
 }
 
 function showCalModal() {
@@ -642,13 +654,21 @@ async function submitCalEntry(e) {
     status:           document.getElementById("cal-entry-status").value,
     scheduled_date:   document.getElementById("cal-entry-date").value  || null,
     scheduled_time:   document.getElementById("cal-entry-time").value  || null,
-    notes:            document.getElementById("cal-entry-notes").value.trim() || null,
-    thread_ids:       calTpSelected.size ? [...calTpSelected] : null,
-    loop_ids_closing: calLpcSelected.size ? [...calLpcSelected] : null,
-    updated_at:       new Date().toISOString(),
+    notes:             document.getElementById("cal-entry-notes").value.trim()             || null,
+    thread_ids:        calTpSelected.size ? [...calTpSelected] : null,
+    loop_ids_closing:  calLpcSelected.size ? [...calLpcSelected] : null,
+    updated_at:        new Date().toISOString(),
   };
   // only include optional columns if they have values (avoids 400 if migration not yet run)
   if (vaultPath) payload.vault_path = vaultPath;
+  const thumbnailText    = document.getElementById("cal-entry-thumbnail-text").value.trim();
+  const publishTitle     = document.getElementById("cal-entry-publish-title").value.trim();
+  const videoDescription = document.getElementById("cal-entry-video-description").value.trim();
+  const script           = document.getElementById("cal-entry-script").value.trim();
+  if (thumbnailText)    payload.thumbnail_text    = thumbnailText;
+  if (publishTitle)     payload.publish_title     = publishTitle;
+  if (videoDescription) payload.video_description = videoDescription;
+  if (script)           payload.script            = script;
 
   if (!payload.title) { alert("Title is required."); return; }
 

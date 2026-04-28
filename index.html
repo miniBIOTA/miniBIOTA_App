@@ -465,75 +465,112 @@
     </div>
     <form onsubmit="submitCalEntry(event)">
       <input type="hidden" id="cal-entry-id">
-      <div class="cal-form-group">
-        <label>Story Title *</label>
-        <input id="cal-entry-title" placeholder="Working title or story idea" required>
-      </div>
-      <div class="cal-form-row">
-        <div class="cal-form-group">
-          <label>Format *</label>
-          <select id="cal-entry-format" required>
-            <option value="short">Short (30–60 sec)</option>
-            <option value="mid">Mid (61 sec–5 min)</option>
-            <option value="longform">Longform (~10 min)</option>
-          </select>
-        </div>
-        <div class="cal-form-group">
-          <label>Status</label>
-          <select id="cal-entry-status">
-            <option value="planned">Planned</option>
-            <option value="in_production">In Production</option>
-            <option value="published">Published</option>
-          </select>
-        </div>
-      </div>
-      <div class="cal-form-row">
-        <div class="cal-form-group">
-          <label>Date</label>
-          <input id="cal-entry-date" type="date">
-        </div>
-        <div class="cal-form-group">
-          <label>Time</label>
-          <input id="cal-entry-time" type="time">
-        </div>
-      </div>
-      <div class="cal-form-group">
-        <label>Story Notes / Angle</label>
-        <textarea id="cal-entry-notes" placeholder="What's the hook? What observation does this come from?"></textarea>
-      </div>
-      <div class="cal-form-group">
-        <label>Vault Path <span class="cal-form-help" style="display:inline;margin-left:6px">longform only — e.g. 3. Content Pipeline\EP01-shrimp-zoea.md</span></label>
-        <input id="cal-entry-vault-path" placeholder="relative path from vault root">
+
+      <!-- Tab Nav -->
+      <div class="cal-modal-tabs">
+        <button type="button" class="cal-mtab active" id="cal-mtab-details"    onclick="setCalModalTab('details')">Details</button>
+        <button type="button" class="cal-mtab"        id="cal-mtab-content"    onclick="setCalModalTab('content')">Content</button>
+        <button type="button" class="cal-mtab"        id="cal-mtab-production" onclick="setCalModalTab('production')">Production</button>
       </div>
 
-      <!-- Production Checklist -->
-      <div class="cal-cl-section" id="cal-cl-section">
-        <div class="cal-cl-section-header">
-          <span class="cal-cl-section-title">Production Checklist</span>
-          <span class="cal-cl-progress" id="cal-cl-progress"></span>
+      <!-- Details Pane -->
+      <div id="cal-mtab-pane-details">
+        <div class="cal-form-group">
+          <label>Story Title *</label>
+          <input id="cal-entry-title" placeholder="Working title or story idea" required>
         </div>
-        <div id="cal-cl-items"></div>
+        <div class="cal-form-row">
+          <div class="cal-form-group">
+            <label>Format *</label>
+            <select id="cal-entry-format" required>
+              <option value="short">Short (30–60 sec)</option>
+              <option value="mid">Mid (61 sec–5 min)</option>
+              <option value="longform">Longform (~10 min)</option>
+            </select>
+          </div>
+          <div class="cal-form-group">
+            <label>Status</label>
+            <select id="cal-entry-status">
+              <option value="planned">Planned</option>
+              <option value="in_production">In Production</option>
+              <option value="published">Published</option>
+            </select>
+          </div>
+        </div>
+        <div class="cal-form-row">
+          <div class="cal-form-group">
+            <label>Date</label>
+            <input id="cal-entry-date" type="date">
+          </div>
+          <div class="cal-form-group">
+            <label>Time</label>
+            <input id="cal-entry-time" type="time">
+          </div>
+        </div>
+        <div class="cal-form-group">
+          <label>Story Notes / Angle</label>
+          <textarea id="cal-entry-notes" placeholder="What's the hook? What observation does this come from?"></textarea>
+        </div>
+        <div class="cal-form-group">
+          <label>Vault Path <span class="cal-form-help" style="display:inline;margin-left:6px">longform only — e.g. 3. Content Pipeline\EP01-shrimp-zoea.md</span></label>
+          <input id="cal-entry-vault-path" placeholder="relative path from vault root">
+        </div>
       </div>
 
-      <div class="cal-form-group">
-        <label>Story Threads <span class="cal-lpc-badge" id="cal-tp-count"></span></label>
-        <div class="cal-lpc-filter">
-          <button type="button" class="cal-tp-btn active" data-tfilter="all"          onclick="setTpFilter('all')">All</button>
-          <button type="button" class="cal-tp-btn"        data-tfilter="story_ready"  onclick="setTpFilter('story_ready')">Story Ready</button>
-          <button type="button" class="cal-tp-btn"        data-tfilter="in_production" onclick="setTpFilter('in_production')">In Production</button>
-          <button type="button" class="cal-tp-btn"        data-tfilter="developing"   onclick="setTpFilter('developing')">Developing</button>
+      <!-- Content Pane -->
+      <div id="cal-mtab-pane-content" class="hidden">
+        <div class="cal-form-row">
+          <div class="cal-form-group">
+            <label>Thumbnail Text</label>
+            <input id="cal-entry-thumbnail-text" placeholder="Short text overlay on thumbnail" maxlength="80">
+          </div>
+          <div class="cal-form-group">
+            <label>Published Title</label>
+            <input id="cal-entry-publish-title" placeholder="Final YouTube / Shorts title">
+          </div>
         </div>
-        <div class="cal-lpc" id="cal-tp"><div style="padding:10px 12px;color:#3a5060;font-size:12px">Loading threads...</div></div>
-      </div>
-      <div class="cal-form-group">
-        <label>Loops This Closes <span class="cal-lpc-badge" id="cal-lpc-count"></span></label>
-        <div class="cal-lpc-filter">
-          <button type="button" class="cal-lpc-btn active" data-filter="all"     onclick="setLpcFilter('all')">All</button>
-          <button type="button" class="cal-lpc-btn"        data-filter="youtube" onclick="setLpcFilter('youtube')">YouTube</button>
-          <button type="button" class="cal-lpc-btn"        data-filter="shorts"  onclick="setLpcFilter('shorts')">Shorts</button>
+        <div class="cal-form-group">
+          <label>Description / Caption</label>
+          <textarea id="cal-entry-video-description" placeholder="Video description or caption..." style="min-height:110px"></textarea>
         </div>
-        <div class="cal-lpc" id="cal-lpc"><div style="padding:10px 12px;color:#3a5060;font-size:12px">Loading loops...</div></div>
+        <div class="cal-form-group">
+          <label>Script</label>
+          <textarea id="cal-entry-script" placeholder="Full script or talking points..." style="min-height:260px"></textarea>
+        </div>
       </div>
+
+      <!-- Production Pane -->
+      <div id="cal-mtab-pane-production" class="hidden">
+        <!-- Production Checklist -->
+        <div class="cal-cl-section" id="cal-cl-section">
+          <div class="cal-cl-section-header">
+            <span class="cal-cl-section-title">Production Checklist</span>
+            <span class="cal-cl-progress" id="cal-cl-progress"></span>
+          </div>
+          <div id="cal-cl-items"></div>
+        </div>
+
+        <div class="cal-form-group">
+          <label>Story Threads <span class="cal-lpc-badge" id="cal-tp-count"></span></label>
+          <div class="cal-lpc-filter">
+            <button type="button" class="cal-tp-btn active" data-tfilter="all"           onclick="setTpFilter('all')">All</button>
+            <button type="button" class="cal-tp-btn"        data-tfilter="story_ready"   onclick="setTpFilter('story_ready')">Story Ready</button>
+            <button type="button" class="cal-tp-btn"        data-tfilter="in_production" onclick="setTpFilter('in_production')">In Production</button>
+            <button type="button" class="cal-tp-btn"        data-tfilter="developing"    onclick="setTpFilter('developing')">Developing</button>
+          </div>
+          <div class="cal-lpc" id="cal-tp"><div style="padding:10px 12px;color:#3a5060;font-size:12px">Loading threads...</div></div>
+        </div>
+        <div class="cal-form-group">
+          <label>Loops This Closes <span class="cal-lpc-badge" id="cal-lpc-count"></span></label>
+          <div class="cal-lpc-filter">
+            <button type="button" class="cal-lpc-btn active" data-filter="all"     onclick="setLpcFilter('all')">All</button>
+            <button type="button" class="cal-lpc-btn"        data-filter="youtube" onclick="setLpcFilter('youtube')">YouTube</button>
+            <button type="button" class="cal-lpc-btn"        data-filter="shorts"  onclick="setLpcFilter('shorts')">Shorts</button>
+          </div>
+          <div class="cal-lpc" id="cal-lpc"><div style="padding:10px 12px;color:#3a5060;font-size:12px">Loading loops...</div></div>
+        </div>
+      </div>
+
       <div class="cal-modal-actions">
         <button type="button" class="cal-delete-btn" id="cal-delete-btn" onclick="deleteCalEntry()" style="display:none">Delete</button>
         <button type="button" class="cal-cancel-btn" onclick="closeCalModal()">Cancel</button>

@@ -1278,11 +1278,33 @@ details[open] .card-note { color: #8a9aaa; }
   border: 1px solid #2a3a4a;
   border-radius: 10px;
   padding: 24px;
-  width: 480px;
+  width: 820px;
   max-width: 96vw;
   max-height: 88vh;
   overflow-y: auto;
 }
+.cal-modal-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #1a2e3e;
+}
+.cal-mtab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #3a5060;
+  font-size: 11px;
+  font-family: inherit;
+  padding: 7px 18px;
+  cursor: pointer;
+  margin-bottom: -1px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  transition: color 0.12s, border-color 0.12s;
+}
+.cal-mtab:hover { color: #8aaabb; }
+.cal-mtab.active { color: #60b0cc; border-bottom-color: #60b0cc; }
 .cal-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
 .cal-modal-title  { font-size: 15px; font-weight: 600; color: #c8d8e0; }
 .cal-modal-close  { background: none; border: none; color: #3a5060; font-size: 18px; cursor: pointer; padding: 0 4px; font-family: inherit; }
