@@ -98,7 +98,14 @@ function updateCalStats() {
 // ── Board View ──
 
 function renderCalBoard() {
-  const shown = calEntries.filter(e => e.status !== "published");
+  const shown = calEntries.filter(e => {
+    if (e.status !== "published") return true;
+    // Published — keep on board until all checklist items are complete
+    const clItems = (CAL_CHECKLIST_MAP[e.format] || (() => []))();
+    if (!clItems.length) return false;
+    const clState = e.checklist_state || {};
+    return !clItems.every(i => clState[i.id]);
+  });
 
   ["short", "mid", "longform"].forEach(fmt => {
     const col = document.getElementById("cal-col-" + fmt);
