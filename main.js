@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const { processAndUploadImage } = require('./services/image-upload');
 
 let win = null;
 let mqttClient = null;
@@ -41,6 +42,14 @@ ipcMain.handle('reindex-media', async (event, folder) => {
     return { success: true, ...result };
   } catch (e) {
     return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle('image-upload-webp', async (_event, payload) => {
+  try {
+    return await processAndUploadImage(payload);
+  } catch (e) {
+    return { ok: false, error: e.message };
   }
 });
 

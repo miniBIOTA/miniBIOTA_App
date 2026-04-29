@@ -10,3 +10,7 @@ const HEADERS = {
 function api(path) {
   return fetch(SUPABASE_URL + "/rest/v1/" + path, { headers: HEADERS }).then(r => r.json());
 }
+
+if (typeof module !== "undefined") {
+  module.exports = { SUPABASE_URL, SUPABASE_KEY, HEADERS };
+}

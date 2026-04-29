@@ -31,6 +31,7 @@ Electron desktop app for internal miniBIOTA operations. Connects directly to Sup
 | `js/calendar.js` | Content calendar |
 | `js/monitoring.js` | Live biome telemetry (MQTT + Supabase fallback) |
 | `main.js` | Electron entry point |
+| `services/image-upload.js` | Backend image pipeline: Sharp WebP conversion + Supabase Storage upload |
 | `package.json` | Electron + electron-builder config |
 | `assets/icon.ico` | App icon (miniBIOTA logo) |
 | `migrations/` | SQL migration files (run manually in Supabase SQL Editor) |
@@ -41,7 +42,8 @@ Electron desktop app for internal miniBIOTA operations. Connects directly to Sup
 
 - **Supabase table name:** `biosphere_profile` (singular — NOT `biosphere_profiles`)
 - **Storage buckets:** `images` (species, biomes, biosphere) and `chronicles-images` (chronicles)
-- **Image uploads:** WebP conversion via Canvas API (1600px max, 85% quality) before upload
+- **Image uploads:** Renderer sends image bytes to Electron main via IPC; `services/image-upload.js` converts with Sharp to WebP (1600px max, quality 82), strips metadata, uploads only WebP to Supabase Storage, and returns an error with no original fallback if conversion/upload fails.
+- **Image storage hygiene:** Admin upload flows delete newly uploaded WebP files if the follow-up database write fails, preventing orphaned bucket objects.
 - **Biodiversity counts** (total extant species, active realms/biomes): read from stored DB values only — do not auto-calculate
 - **`admLoaded` flag** is declared in `admin.js` but read in `showPage()` in `core.js` — works via shared global browser scope
 - **Content calendar modal** is tabbed (Details / Content / Production). New content fields (`thumbnail_text`, `publish_title`, `video_description`, `script`) use conditional payload inclusion — they're only sent if non-empty, avoiding 400 errors before the migration runs. Migration: `migrations/003_content_calendar_content_fields.sql`.

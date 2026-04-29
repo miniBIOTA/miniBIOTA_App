@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   reindexMedia: (folder) => ipcRenderer.invoke('reindex-media', folder),
   onReindexProgress: (cb) => ipcRenderer.on('reindex-progress', (_e, data) => cb(data)),
   removeReindexProgress: () => ipcRenderer.removeAllListeners('reindex-progress'),
+  uploadImageWebP: (payload) => ipcRenderer.invoke('image-upload-webp', payload),
 
   monitoringConnect: () => ipcRenderer.invoke('monitoring-connect'),
   monitoringDisconnect: () => ipcRenderer.invoke('monitoring-disconnect'),

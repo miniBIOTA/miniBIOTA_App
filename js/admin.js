@@ -18,6 +18,7 @@ let admFilterRealm  = null;
 let admFilterBiome  = null;
 let admFilterType   = null;
 let admFilterStatus = null;
+let _lastImageError = '';
 
 // ── Utilities ──────────────────────────────────────────
 
@@ -25,52 +26,36 @@ function admStorageUrl(bucket, filename) {
   return `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${filename}`;
 }
 
-async function admConvertToWebP(file, maxDimension = 1600, quality = 0.85) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      let { naturalWidth: w, naturalHeight: h } = img;
-      if (w > maxDimension || h > maxDimension) {
-        if (w > h) { h = Math.round(h * maxDimension / w); w = maxDimension; }
-        else       { w = Math.round(w * maxDimension / h); h = maxDimension; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(objectUrl);
-      canvas.toBlob(blob => {
-        if (!blob) { reject(new Error('WebP conversion failed')); return; }
-        const webpName = file.name.replace(/\.[^.]+$/, '') + '.webp';
-        resolve(new File([blob], webpName, { type: 'image/webp' }));
-      }, 'image/webp', quality);
-    };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Image load failed')); };
-    img.src = objectUrl;
-  });
-}
-
 async function admUploadToStorage(bucket, filename, file) {
-  // Convert to WebP before uploading (matches Flask backend behavior)
-  let uploadFile = file;
-  try {
-    uploadFile = await admConvertToWebP(file);
-    filename = filename.replace(/\.[^.]+$/, '.webp');
-  } catch(e) {
-    console.warn('WebP conversion failed, uploading original:', e);
+  _lastImageError = '';
+  if (!window.electronAPI?.uploadImageWebP) {
+    _lastImageError = 'backend image processor unavailable';
+    admStatus('Backend image processor is unavailable.', 'err', 8000);
+    return null;
   }
-  const url = `${SUPABASE_URL}/storage/v1/object/${bucket}/${filename}`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': 'Bearer ' + SUPABASE_KEY,
-      'Content-Type': 'image/webp',
-      'x-upsert': 'true'
-    },
-    body: uploadFile
+
+  admStatus('Converting image to WebP and uploading...', 'ok', 30000);
+  const result = await window.electronAPI.uploadImageWebP({
+    bucket,
+    filename,
+    originalName: file.name,
+    mimeType: file.type,
+    size: file.size,
+    arrayBuffer: await file.arrayBuffer(),
+    options: { maxDimension: 1600, quality: 82 }
   });
-  return r.ok ? filename : null;
+
+  if (!result.ok) {
+    _lastImageError = result.error || 'unknown error';
+    console.error('Image upload failed:', result.error);
+    admStatus(`Image upload failed: ${result.error}`, 'err', 10000);
+    return null;
+  }
+
+  const kbBefore = Math.round(result.originalBytes / 1024);
+  const kbAfter = Math.round(result.webpBytes / 1024);
+  admStatus(`Image converted to WebP and uploaded (${kbBefore} KB -> ${kbAfter} KB).`, 'ok');
+  return result.filename;
 }
 
 async function admDeleteFromStorage(bucket, filename) {
@@ -281,11 +266,39 @@ async function admEditSpecies(id) {
   document.getElementById('adm-sp-submit-btn').textContent = 'Update Species';
   document.getElementById('adm-sp-cancel-btn').style.display = '';
   document.getElementById('adm-sp-form').scrollIntoView({ behavior: 'smooth' });
+  // Load existing images into the inline preview
+  const imgs = await api(`species_images?species_id=eq.${id}&order=is_primary.desc,id.asc`);
+  const preview = document.getElementById('adm-sp-images-preview');
+  if (!preview) return;
+  if (!imgs.length) {
+    preview.innerHTML = '<div style="font-size:11px;color:#3a4a5a;margin-top:4px">No images yet — upload one above.</div>';
+    return;
+  }
+  const thumbs = imgs.map(img => `
+    <div style="position:relative;display:inline-block">
+      <img src="${admStorageUrl('images', img.filename)}"
+           style="width:64px;height:64px;object-fit:cover;border-radius:4px;border:1px solid ${img.is_primary ? '#2a5a3a' : '#1a2a3a'}"
+           title="${escHtml(img.filename)}">
+      ${img.is_primary ? '<div style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:9px;color:#60aa80;background:rgba(0,10,0,0.75);padding:2px 0;border-radius:0 0 4px 4px">★ primary</div>' : ''}
+    </div>`).join('');
+  preview.innerHTML = `
+    <div style="margin-top:8px">
+      <div style="font-size:11px;color:#4a5a6a;margin-bottom:6px">${imgs.length} image${imgs.length !== 1 ? 's' : ''} saved</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start">
+        ${thumbs}
+        <button type="button" class="adm-btn" style="font-size:11px;height:64px"
+          onclick="admShowImages(${id},'${escHtml(s.slug || '')}','${escHtml(s.common_name || s.scientific_name || '')}')">
+          Manage →
+        </button>
+      </div>
+    </div>`;
 }
 
 function admClearSpeciesForm() {
   admEditingSpeciesId = null;
   document.getElementById('adm-sp-form').reset();
+  const preview = document.getElementById('adm-sp-images-preview');
+  if (preview) preview.innerHTML = '';
   document.getElementById('adm-sp-form-title').textContent = 'Add New Species';
   document.getElementById('adm-sp-submit-btn').textContent = 'Add Species';
   document.getElementById('adm-sp-cancel-btn').style.display = 'none';
@@ -353,14 +366,28 @@ async function admSubmitSpecies(e) {
   // Handle image upload
   const imgInput = document.getElementById('sp-image');
   if (imgInput.files[0] && ok) {
-    const respData = await resp.json();
-    const savedSpecies = Array.isArray(respData) ? respData[0] : respData;
-    const speciesId = savedSpecies?.id || admEditingSpeciesId;
-    const slug = savedSpecies?.slug || admSpeciesList.find(s => s.id === speciesId)?.slug || 'species';
-    await admUploadAndLinkSpeciesImage(speciesId, slug, imgInput.files[0]);
+    let speciesId, slug;
+    if (admEditingSpeciesId) {
+      // For edits, we already know the ID; avoid consuming the response body (PATCH can return 204)
+      speciesId = admEditingSpeciesId;
+      slug = admSpeciesList.find(s => s.id === speciesId)?.slug || 'species';
+    } else {
+      const respData = await resp.json();
+      const savedSpecies = Array.isArray(respData) ? respData[0] : respData;
+      speciesId = savedSpecies?.id;
+      slug = savedSpecies?.slug || 'species';
+    }
+    const imageOk = await admUploadAndLinkSpeciesImage(speciesId, slug, imgInput.files[0]);
+    if (!imageOk) {
+      admStatus(`${admEditingSpeciesId ? 'Species updated' : 'Species added'}, but image failed: ${_lastImageError || 'unknown error'}`, 'err', 10000);
+      document.getElementById('admin-status').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      admLoadSpecies();
+      return;
+    }
   }
 
   admStatus(admEditingSpeciesId ? 'Species updated.' : 'Species added.', 'ok');
+  document.getElementById('admin-status').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   admClearSpeciesForm();
   admLoadSpecies();
 }
@@ -420,7 +447,11 @@ async function admRefreshImageGrid() {
 async function admUploadSpeciesImage() {
   const input = document.getElementById('adm-img-upload-input');
   if (!input.files[0]) return;
-  await admUploadAndLinkSpeciesImage(admImgSpeciesId, admImgSpeciesSlug, input.files[0]);
+  const ok = await admUploadAndLinkSpeciesImage(admImgSpeciesId, admImgSpeciesSlug, input.files[0]);
+  if (!ok) {
+    admStatus(`Image upload failed: ${_lastImageError || 'unknown error'}`, 'err', 10000);
+    return;
+  }
   input.value = '';
   admRefreshImageGrid();
 }
@@ -428,23 +459,28 @@ async function admUploadSpeciesImage() {
 async function admUploadAndLinkSpeciesImage(speciesId, slug, file) {
   const base = `${slug || 'species'}-${Date.now()}`;
   const savedName = await admUploadToStorage('images', base + '.jpg', file);
-  if (!savedName) { admStatus('Image upload failed.', 'err'); return; }
-  const existing = await api(`species_images?species_id=eq.${speciesId}&select=id`);
+  if (!savedName) return false;
+  // species_images has no auto-increment PK — must allocate next id explicitly
+  const [existing, maxRow] = await Promise.all([
+    api(`species_images?species_id=eq.${speciesId}&select=id`),
+    api(`species_images?select=id&order=id.desc&limit=1`)
+  ]);
   const isPrimary = existing.length === 0;
-  await fetch(`${SUPABASE_URL}/rest/v1/species_images`, {
+  const nextId = (maxRow[0]?.id ?? 0) + 1;
+  const linkResponse = await fetch(`${SUPABASE_URL}/rest/v1/species_images`, {
     method: 'POST',
     headers: { ...HEADERS, 'Prefer': 'return=minimal' },
     body: JSON.stringify({
-      species_id: speciesId, filename: savedName, is_primary: isPrimary,
-      upload_date: new Date().toISOString()
+      id: nextId, species_id: speciesId, filename: savedName,
+      is_primary: isPrimary, upload_date: new Date().toISOString()
     })
   });
-  if (isPrimary) {
-    await fetch(`${SUPABASE_URL}/rest/v1/species?id=eq.${speciesId}`, {
-      method: 'PATCH', headers: { ...HEADERS, 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ image_url: admStorageUrl('images', savedName) })
-    });
+  if (!linkResponse.ok) {
+    await admDeleteFromStorage('images', savedName);
+    _lastImageError = 'image saved to storage but database link failed';
+    return false;
   }
+  return true;
 }
 
 async function admSetPrimaryImage(imageId) {
@@ -457,14 +493,6 @@ async function admSetPrimaryImage(imageId) {
     body: JSON.stringify({ is_primary: true })
   });
   if (r.ok) {
-    const data = await r.json();
-    const filename = data[0]?.filename;
-    if (filename) {
-      await fetch(`${SUPABASE_URL}/rest/v1/species?id=eq.${admImgSpeciesId}`, {
-        method: 'PATCH', headers: { ...HEADERS, 'Prefer': 'return=minimal' },
-        body: JSON.stringify({ image_url: admStorageUrl('images', filename) })
-      });
-    }
     admRefreshImageGrid();
   }
 }
@@ -527,9 +555,12 @@ async function admSubmitBiosphere(e) {
 
   // Handle image upload
   const imgFile = document.getElementById('bs-image').files[0];
+  let uploadedImage = null;
   if (imgFile) {
     const savedName = await admUploadToStorage('images', `biosphere-${Date.now()}.jpg`, imgFile);
-    if (savedName) payload.image_filename = savedName;
+    if (!savedName) return;
+    uploadedImage = { bucket: 'images', filename: savedName };
+    payload.image_filename = savedName;
   }
 
   let r;
@@ -543,7 +574,10 @@ async function admSubmitBiosphere(e) {
     });
   }
   if (r.ok) { admStatus('Biosphere profile saved.', 'ok'); admLoadBiosphere(); }
-  else admStatus('Error saving biosphere profile.', 'err');
+  else {
+    if (uploadedImage) await admDeleteFromStorage(uploadedImage.bucket, uploadedImage.filename);
+    admStatus('Error saving biosphere profile. Uploaded image was removed.', 'err');
+  }
 }
 
 // ── Biomes ─────────────────────────────────────────────
@@ -636,10 +670,13 @@ async function admSubmitBiome(e) {
 
   // Image upload
   const imgFile = document.getElementById('bm-image').files[0];
+  let uploadedImage = null;
   if (imgFile) {
     const slug = (payload.name || 'biome').toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const savedName = await admUploadToStorage('images', `${slug}-${Date.now()}.jpg`, imgFile);
-    if (savedName) payload.image_filename = savedName;
+    if (!savedName) return;
+    uploadedImage = { bucket: 'images', filename: savedName };
+    payload.image_filename = savedName;
   }
 
   let r;
@@ -653,7 +690,10 @@ async function admSubmitBiome(e) {
     });
   }
   if (r.ok) { admStatus(admEditingBiomeId ? 'Biome updated.' : 'Biome added.', 'ok'); admClearBiomeForm(); admLoadBiomes(); }
-  else admStatus('Error saving biome.', 'err');
+  else {
+    if (uploadedImage) await admDeleteFromStorage(uploadedImage.bucket, uploadedImage.filename);
+    admStatus('Error saving biome. Uploaded image was removed.', 'err');
+  }
 }
 
 async function admDeleteBiome(id) {
@@ -779,9 +819,12 @@ async function admSubmitChronicle(e) {
 
   // Image upload
   const imgFile = document.getElementById('ch-image').files[0];
+  let uploadedImage = null;
   if (imgFile && !payload.youtube_url) {
     const savedName = await admUploadToStorage('chronicles-images', `chronicle-${Date.now()}.jpg`, imgFile);
-    if (savedName) payload.image_url = admStorageUrl('chronicles-images', savedName);
+    if (!savedName) return;
+    uploadedImage = { bucket: 'chronicles-images', filename: savedName };
+    payload.image_url = admStorageUrl('chronicles-images', savedName);
   }
 
   let r;
@@ -795,7 +838,10 @@ async function admSubmitChronicle(e) {
     });
   }
   if (r.ok) { admStatus(admEditingChronicleId ? 'Chronicle updated.' : 'Chronicle added.', 'ok'); admClearChronicleForm(); admLoadChronicles(); }
-  else admStatus('Error saving chronicle.', 'err');
+  else {
+    if (uploadedImage) await admDeleteFromStorage(uploadedImage.bucket, uploadedImage.filename);
+    admStatus('Error saving chronicle. Uploaded image was removed.', 'err');
+  }
 }
 
 async function admDeleteChronicle(id) {
