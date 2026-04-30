@@ -20,8 +20,8 @@ git status --short
 Write-Host ""
 
 Write-Host "[2/3] Reminder"
-Write-Host "If app behavior, schema assumptions, telemetry behavior, or cross-domain state changed,"
-Write-Host "update the relevant Brain docs before closing."
+Write-Host "If app behavior, schema assumptions, telemetry behavior, operational status, or cross-domain state changed,"
+Write-Host "update M:\miniBIOTA\miniBIOTA_Brain\11. App Operations\app_brief.md before closing."
 Write-Host ""
 
 Write-Host "[3/3] Git actions"

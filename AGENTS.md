@@ -14,6 +14,7 @@ Codex is the primary operating interface for this repo moving forward. `CLAUDE.m
 - Sharp image processing in `services/image-upload.js`.
 - SQL migrations in `migrations/`, run manually in Supabase SQL Editor.
 - Brain tool layer at `M:\miniBIOTA\miniBIOTA_Brain\_system\minibiota_tools.py`.
+- Brain strategy brief at `M:\miniBIOTA\miniBIOTA_Brain\11. App Operations\app_brief.md`.
 
 ## Startup Sequence
 For a full Codex bootstrap, run:
@@ -27,19 +28,21 @@ If working manually:
 1. Read `AGENTS.md`.
 2. Read `docs/agent_protocol.md`.
 3. Read `M:\miniBIOTA\miniBIOTA_Brain\_system\agent_memory.md`.
-4. Read `M:\miniBIOTA\miniBIOTA_Brain\BRAIN_AGENT_PROTOCOL.md`.
-5. Load the lightest app file or Brain context that can safely answer the request.
-6. Read `CLAUDE.md` only when checking legacy context that has not yet been migrated into Codex-facing docs.
+4. Read `M:\miniBIOTA\miniBIOTA_Brain\11. App Operations\app_brief.md`.
+5. Read `M:\miniBIOTA\miniBIOTA_Brain\BRAIN_AGENT_PROTOCOL.md`.
+6. Load the lightest app file or Brain context that can safely answer the request.
+7. Read `CLAUDE.md` only when checking legacy context that has not yet been migrated into Codex-facing docs.
 
 ## Source Of Truth
 Use this hierarchy when sources disagree:
 
 1. User direction in the current session.
 2. `AGENTS.md` and `docs/agent_protocol.md` for App Agent operating rules.
-3. Brain protocol/memory for cross-domain constraints and current system state.
-4. App source files for runtime behavior.
-5. Supabase for structured/queryable records and schema truth.
-6. `CLAUDE.md` or `handoff_claude_*` only as legacy context.
+3. Brain `11. App Operations/app_brief.md` for strategy-level current app state.
+4. Brain protocol/memory for cross-domain constraints and current system state.
+5. App source files for runtime behavior.
+6. Supabase for structured/queryable records and schema truth.
+7. `CLAUDE.md` or `handoff_claude_*` only as legacy context.
 
 Chat history and private model memory are never source of truth. Durable project memory belongs in Markdown in this repo/vault, in Brain, or in Supabase when it is structured data.
 
@@ -86,6 +89,13 @@ This app has service-role access and can affect live operational records. Before
 
 Do not create dummy database or storage writes to inspect behavior. Read source, function signatures, or schema instead.
 
+## Brain Relationship
+This repo reports to the Strategy Agent through:
+
+`M:\miniBIOTA\miniBIOTA_Brain\11. App Operations\app_brief.md`
+
+Update that brief at session end when app behavior, schema assumptions, operational status, risks, blockers, or cross-domain dependencies change. Keep implementation detail and code context in this repo.
+
 ## Write Policy
 Respect `MINIBIOTA_WRITE_MODE` from Brain when available:
 
@@ -126,4 +136,4 @@ Unresolved questions:
 - item or "None"
 ```
 
-Update Brain when the session changes durable cross-domain state, schema assumptions, operating rules, or app status other agents must know.
+Update `M:\miniBIOTA\miniBIOTA_Brain\11. App Operations\app_brief.md` when the session changes durable cross-domain state, schema assumptions, operating rules, or app status other agents must know.

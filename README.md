@@ -52,3 +52,11 @@ Remote:
 `https://github.com/miniBIOTA/miniBIOTA_App.git`
 
 Track source files, migrations, docs, and helper scripts. Keep `node_modules/`, build outputs, logs, local env files, and generated tool outputs out of git.
+
+## Brain Link
+
+This domain reports to the Strategy Agent through:
+
+`M:\miniBIOTA\miniBIOTA_Brain\11. App Operations\app_brief.md`
+
+Update that brief when app behavior, schema assumptions, operational status, risks, blockers, or cross-domain dependencies change.

@@ -14,6 +14,7 @@ powershell -ExecutionPolicy Bypass -File "_system/codex_session_start.ps1"
    - `AGENTS.md`
    - this file
    - `M:\miniBIOTA\miniBIOTA_Brain\_system\agent_memory.md`
+   - `M:\miniBIOTA\miniBIOTA_Brain\11. App Operations\app_brief.md`
    - `M:\miniBIOTA\miniBIOTA_Brain\BRAIN_AGENT_PROTOCOL.md`
 3. Load only the app source files needed for the request.
 4. Use Supabase or live app operations only when current structured records or runtime behavior are needed.
@@ -66,6 +67,15 @@ Always get explicit approval before:
 - Supabase `telemetry_snapshot` is the fallback singleton.
 - Treat setpoint/control changes as live biosphere-affecting operations. Confirm before writing.
 
+## Brain Brief Update Rules
+Update `M:\miniBIOTA\miniBIOTA_Brain\11. App Operations\app_brief.md` when the session changes:
+- App behavior, tabs, or workflows.
+- Schema assumptions or migrations used by the app.
+- Operational status, risks, or blockers.
+- Cross-domain dependencies for Website, Content, Financials, Hardware, Sales, or Ecosystem/Data.
+
+Do not update Brain mirrored docs directly. Source docs live in this repo.
+
 ## Git Rules
 - Preserve user edits. Never revert changes you did not make unless explicitly asked.
 - Keep `node_modules/`, `dist/`, local outputs, logs, env files, and editor state out of git.
@@ -91,7 +101,7 @@ Before final response:
 - Check `git status --short`.
 - Confirm whether app behavior changed.
 - Confirm whether database/schema/storage/telemetry changed.
-- Update Brain or repo docs if durable operating knowledge changed.
+- Update the App Operations brief or repo docs if durable operating knowledge changed.
 - Report unresolved questions.
 
 Use this report shape:
