@@ -2,3 +2,25 @@ node_modules/
 dist/
 out/
 tools/telemetry-snapshot.output.json
+
+# Secrets and local environment
+.env
+.env.local
+*.env.local
+
+# Agent/editor local state
+.claude/
+.codex/
+.vscode/
+.idea/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+~$*

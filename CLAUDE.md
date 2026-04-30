@@ -1,4 +1,6 @@
-# miniBIOTA App — Claude Code Wrapper
+# miniBIOTA App - Legacy Claude Context
+
+> Legacy note: miniBIOTA_App now uses Codex as the primary operating interface. This file is retained for historical Claude context only; active Codex rules live in `AGENTS.md` and `docs/agent_protocol.md`.
 
 ## Role
 You are working on the miniBIOTA desktop app and mobile logging tools. This repo contains the code. Context, schema knowledge, and strategy live in Brain.
@@ -59,7 +61,9 @@ Electron desktop app for internal miniBIOTA operations. Connects directly to Sup
 - **CRM tab** (replaced Sales Pipeline): contacts, pipeline kanban, activities with overdue tracking. Tables: `crm_contacts`, `crm_activities`, `partner_opportunities.contact_id`. Migration: `migrations/002_crm_schema.sql`.
 - **Monitoring tab (9th tab):** Live biome telemetry and setpoint control. Connects directly to MQTT broker at `192.168.8.228:1883` (when on mB2.4 WiFi); falls back to Supabase `telemetry_snapshot` singleton.
 
-## Session Close-Out Protocol
+## Legacy Session Close-Out Protocol
+
+Active closeout rules now live in `AGENTS.md` and `docs/agent_protocol.md`. The notes below are retained only as historical context from the prior Claude workflow.
 
 At the end of every session — before confirming completion to the user — run through this checklist:
 

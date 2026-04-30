@@ -1,4 +1,6 @@
-# Claude Handoff: Backend WebP Image Pipeline
+# Legacy Handoff: Backend WebP Image Pipeline
+
+> Legacy note: this handoff was written during the earlier Claude workflow. miniBIOTA_App now uses Codex as the primary operating interface; active rules live in `AGENTS.md` and `docs/agent_protocol.md`.
 
 ## Goal
 
@@ -181,4 +183,3 @@ That warning appears unrelated to the image upload work.
 The current solution keeps the "backend" inside Electron instead of creating a separate server. That is intentional: this app is an internal desktop tool, already has service-role Supabase access, and already uses Electron IPC for backend-ish work like media indexing and MQTT. This gives stronger image conversion than browser Canvas without adding a deployable service yet.
 
 If miniBIOTA later needs mobile/PWA uploads, this Electron backend will not cover that. At that point, the same logic should move into a real hosted backend endpoint or Supabase Edge Function-compatible image-processing service. For the desktop admin app, the Electron main-process backend is the simplest full-featured backend path.
-
